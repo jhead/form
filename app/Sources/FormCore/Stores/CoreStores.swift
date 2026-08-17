@@ -64,6 +64,23 @@ public final class CoreStores {
         await stats.refresh()
     }
 
+    /// Select a session and load its transcript — the one call the sidebar, the palette and
+    /// the `⌘1`–`⌘9` shortcuts all make.
+    public func select(_ sessionId: String?) async {
+        sessions.selectedSessionId = sessionId
+        guard let sessionId else { return }
+        await chat.load(sessionId: sessionId)
+    }
+
+    /// Creates a session and selects it once the core acknowledges it. The
+    /// `session_created` event carries the same `commandId`, and `SessionStore` selects on
+    /// that, so this only has to dispatch.
+    @discardableResult
+    public func newSession(groupId: String? = nil) async throws -> CommandID {
+        try await sessions.createSession(
+            groupId: groupId, modelRef: settings.settings.defaults.modelRef)
+    }
+
     /// Fan-out, in a fixed order so a session's summary is up to date before the transcript
     /// that references it reacts.
     private func apply(_ event: CoreEvent) {

@@ -23,7 +23,7 @@ subprocess later) and what makes the core reusable from a future Windows/Linux c
 
 ```c
 uint32_t     form_abi_version(void);
-FormCore*    form_core_new(const char *config_json, char **err_out);
+FormCore*    form_core_new(const char *config_json);
 void         form_core_free(FormCore*);
 int32_t      form_core_subscribe(FormCore*, FormEventCallback cb, void *ctx);
 void         form_core_unsubscribe(FormCore*, int32_t token);
@@ -35,6 +35,10 @@ const char*  form_last_error(void);
 
 `form_abi_version()` returns `FORM_ABI_VERSION`; Swift asserts a match at startup and
 refuses to run against a mismatched core. Bump on any breaking change to this file.
+
+`form_core_new` returns null on failure and reports why through `form_last_error()` — a
+thread-local, valid until that thread's next failing call. There is no out-parameter; one
+error channel is enough and an out-param would be a second thing to get wrong.
 
 `config_json` is `CoreConfig`:
 
@@ -84,7 +88,9 @@ All outcomes arrive as events carrying the same `commandId`.
 | `archiveSession` | `sessionId`, `archived` |
 | `moveSession` | `sessionId`, `groupId?`, `index` |
 | `createGroup` / `renameGroup` / `deleteGroup` / `reorderGroup` | … |
-| `setSessionModel` | `sessionId`, `modelRef`, `thinkingLevel` |
+| `setSessionModel` | `sessionId`, `modelRef` (thinking level rides inside it) |
+| `pinSession` | `sessionId`, `pinned` |
+| `setGroupCollapsed` | `groupId`, `collapsed` |
 | `setWorkspaceRoot` | `sessionId`, `path?` |
 | `updateSettings` | `settings` (whole document) |
 | `addAttachment` | `sessionId`, `path` \| `bytesBase64`, `filename`, `mime` |
@@ -123,7 +129,7 @@ provider and runtime failures are *encoded in the stream*, never returned as an 
 | `session_created` / `session_updated` / `session_deleted` | `session` / `sessionId` |
 | `groups_changed` | `groups: SessionGroup[]` |
 | `settings_changed` | `settings: Settings` |
-| `context_usage` | `sessionId`, `usage: ContextUsage` |
+| `context_usage_changed` | `usage: ContextUsage` (the session id is inside it) |
 | `stats_invalidated` | — (Swift re-queries on its own schedule) |
 | `attachment_added` / `attachment_removed` | `attachment` / `attachmentId` |
 | `error` | `code`, `message`, `detail?` — non-fatal, surfaced as a toast |
@@ -172,5 +178,11 @@ struct Settings       { … }                          // see spec 04
 ## 8. Compatibility test
 
 `form-cli protocol-dump` writes one instance of every command, query and event to
-`core/tests/fixtures/protocol/*.json`. The Swift test target decodes all of them and
+`core/tests/fixtures/protocol/{commands,queries,events,messageEvents,entries}/*.json`. The
+last two directories exist because `AssistantMessageEvent` and `EntryKind` only ever appear
+nested inside other events, so most of their variants would otherwise go uncovered — and
+they are the highest-traffic types on the boundary.
+
+Variant enumeration is recovered from serde's own "expected one of …" error rather than a
+hand-kept list, so a new variant added here fails the test automatically. The Swift test target decodes all of them and
 re-encodes; a diff fails the build. This is the tripwire that catches Swift/Rust drift.

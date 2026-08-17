@@ -100,7 +100,7 @@ pub(crate) fn heat_levels(tokens: &[u64]) -> Vec<u8> {
             // with two busy days a value-threshold rule can never reach the top stop,
             // and the busiest day in the period must always read as the busiest.
             let rank = nonzero.partition_point(|&v| v <= t);
-            (((rank * 4) + n - 1) / n).clamp(1, 4) as u8
+            (rank * 4).div_ceil(n).clamp(1, 4) as u8
         })
         .collect()
 }

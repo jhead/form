@@ -113,10 +113,13 @@ public final class ChatStore {
         reset(to: sessionId)
         do {
             let session = try await client.query(GetSession(sessionId: sessionId))
-            // A run may have started while the query was in flight; only adopt the fetched
-            // transcript if we are still looking at the same session and nothing streamed.
-            guard self.sessionId == sessionId, entries.isEmpty else { return }
+            // The user may have moved on, and a run may have streamed entries in while the
+            // query was in flight — the fetched transcript is the base, anything streamed
+            // since is fresher and wins.
+            guard self.sessionId == sessionId else { return }
+            let streamed = entries
             entries = session.entries
+            for entry in streamed { upsert(entry) }
             isLoaded = true
         } catch {
             Log.stores.error(
