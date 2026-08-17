@@ -4,3 +4,8 @@ app/.build/
 app/build/
 *.xcodeproj
 .DS_Store
+
+# Never commit provider credentials. The core reads this at startup.
+.env
+.env.*
+!.env.example
