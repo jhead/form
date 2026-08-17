@@ -63,9 +63,12 @@ lint:
 fmt:
 	@cd $(CORE_DIR) && cargo fmt --all
 
-## TODO(W6): generate with cbindgen and add the drift test.
+## Regenerate core/include/form.h. The generator is a separate out-of-workspace crate so
+## cbindgen is not a dependency of every build; `cd` matters, its .cargo/config.toml
+## redirects the target dir into the gitignored core/target/.
 headers:
-	@echo "core/include/form.h is currently hand-maintained — see docs/specs/06-ffi.md §1"
+	@cd $(CORE_DIR)/crates/form-ffi/tools/headergen && cargo run --quiet
+	@echo "    core/include/form.h regenerated"
 
 ## The header promises these symbols; this is what catches a rename before Swift does.
 check-symbols: core

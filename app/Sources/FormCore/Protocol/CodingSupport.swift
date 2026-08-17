@@ -21,6 +21,24 @@ func decodeUnknownKeys(from decoder: Decoder, known: Set<String>) throws -> [Str
     return all.filter { !known.contains($0.key) }
 }
 
+/// Writes a preserved `.unknown` payload back out.
+///
+/// It has to go through a *keyed* container, not a single-value one: these payloads belong
+/// to unions that are flattened into their parent (`Entry`, `CoreEvent`, `MarkdownBlock`),
+/// and the parent has already written `timestamp` and friends into a keyed container by the
+/// time the union encodes itself. Taking a single-value container there discards them.
+func encodeRawObject(_ raw: JSONValue, to encoder: Encoder) throws {
+    guard case let .object(members) = raw else {
+        var single = encoder.singleValueContainer()
+        try single.encode(raw)
+        return
+    }
+    var c = encoder.container(keyedBy: DynamicKey.self)
+    for (key, value) in members {
+        try c.encode(value, forKey: DynamicKey(key))
+    }
+}
+
 func encodeUnknownKeys(_ extra: [String: JSONValue], to encoder: Encoder) throws {
     guard !extra.isEmpty else { return }
     var c = encoder.container(keyedBy: DynamicKey.self)

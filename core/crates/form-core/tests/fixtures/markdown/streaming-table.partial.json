@@ -1,8 +1,7 @@
 {
   "blocks": [
     {
-      "id": "b0-b52899298fcb",
-      "partial": false,
+      "id": "b0-dcc22c5d0942",
       "type": "paragraph",
       "spans": [
         {
@@ -12,8 +11,7 @@
       ]
     },
     {
-      "id": "b1-aa1e34937ff4",
-      "partial": true,
+      "id": "b1-390eb03215d8",
       "type": "table",
       "align": [
         "none",

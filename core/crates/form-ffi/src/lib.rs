@@ -3,8 +3,9 @@
 //! Nine functions, JSON in and out, events on a callback. See `docs/specs/06-ffi.md`.
 //!
 //! Three rules govern every function here:
-//! 1. **No panic may unwind into Swift** — that is undefined behaviour. Everything is
-//!    wrapped in `catch_unwind`.
+//! 1. **No panic may unwind into Swift** — every `extern "C"` body is wrapped in
+//!    `catch_unwind`, so a panic in `form-core` comes back as an error envelope. Rust would
+//!    otherwise abort at the ABI boundary, which is a crash report instead of a toast.
 //! 2. **No pointer into Rust-owned memory is ever returned.** Strings are freshly
 //!    allocated and freed only by `form_string_free`.
 //! 3. **Events are delivered on one dedicated thread, in order, never concurrently.**

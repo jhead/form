@@ -1,8 +1,7 @@
 {
   "blocks": [
     {
-      "id": "b0-d6ad602f7aaf",
-      "partial": false,
+      "id": "b0-6bb67ed1dfec",
       "type": "paragraph",
       "spans": [
         {
@@ -12,8 +11,7 @@
       ]
     },
     {
-      "id": "b1-e6480669a7ff",
-      "partial": false,
+      "id": "b1-b47ba051ab0a",
       "type": "codeBlock",
       "language": "rust",
       "code": "fn main() {\n    let greeting: &str = \"hello\";\n    println!(\"{greeting}\");\n}\n",
@@ -133,11 +131,11 @@
           "len": 1,
           "scope": "punctuation.section.block.end.rust"
         }
-      ]
+      ],
+      "partial": false
     },
     {
-      "id": "b2-35300a49afb1",
-      "partial": false,
+      "id": "b2-79822d55a9e7",
       "type": "codeBlock",
       "language": "ts",
       "code": "export const add = (a: number, b: number): number => a + b;\n",
@@ -237,11 +235,11 @@
           "len": 1,
           "scope": "punctuation.terminator.statement.js"
         }
-      ]
+      ],
+      "partial": false
     },
     {
-      "id": "b3-7fb351f9af2a",
-      "partial": false,
+      "id": "b3-2c62d4dbb2f4",
       "type": "codeBlock",
       "language": "sh",
       "code": "set -euo pipefail\necho \"$HOME\" | tr a-z A-Z\n",
@@ -296,11 +294,11 @@
           "len": 7,
           "scope": "meta.function-call.arguments.shell"
         }
-      ]
+      ],
+      "partial": false
     },
     {
-      "id": "b4-24f0aeeb4c03",
-      "partial": false,
+      "id": "b4-ba62940fc0ef",
       "type": "codeBlock",
       "language": "yml",
       "code": "name: build\non: [push]\n",
@@ -345,11 +343,11 @@
           "len": 1,
           "scope": "punctuation.definition.sequence.end.yaml"
         }
-      ]
+      ],
+      "partial": false
     },
     {
-      "id": "b5-6c2c7020de3a",
-      "partial": false,
+      "id": "b5-da408e81d085",
       "type": "codeBlock",
       "language": "c++",
       "code": "template <typename T> T max(T a, T b) { return a > b ? a : b; }\n",
@@ -474,11 +472,11 @@
           "len": 1,
           "scope": "punctuation.section.block.end.c++"
         }
-      ]
+      ],
+      "partial": false
     },
     {
-      "id": "b6-015c07adb3cd",
-      "partial": false,
+      "id": "b6-43d72192a928",
       "type": "codeBlock",
       "language": "wingdings",
       "code": "this language does not exist\n",
@@ -488,11 +486,11 @@
           "len": 29,
           "scope": "plain"
         }
-      ]
+      ],
+      "partial": false
     },
     {
-      "id": "b7-45896eacc43a",
-      "partial": false,
+      "id": "b7-09490227ee7d",
       "type": "codeBlock",
       "language": "diff",
       "code": "--- a/x\n+++ b/x\n-removed\n+added\n kept\n",
@@ -517,7 +515,8 @@
           "len": 6,
           "scope": "markup.inserted"
         }
-      ]
+      ],
+      "partial": false
     }
   ]
 }

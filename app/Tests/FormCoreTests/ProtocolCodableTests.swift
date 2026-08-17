@@ -51,7 +51,7 @@ struct ProtocolCodableTests {
             (
                 "toolcall_end",
                 #"""
-                {"type":"toolcall_end","contentIndex":2,"toolCall":{"id":"toolu_1",\
+                {"type":"toolcall_end","contentIndex":2,"toolCall":{"id":"toolu_1",\#
                 "name":"read","arguments":{"path":"src/main.rs"}},"partial":\#(partial)}
                 """#
             ),

@@ -105,7 +105,7 @@ extension Span: Codable {
 
     public func encode(to encoder: Encoder) throws {
         if case let .unknown(_, raw) = self {
-            try raw.encode(to: encoder)
+            try encodeRawObject(raw, to: encoder)
             return
         }
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -250,7 +250,7 @@ extension BlockKind: Codable {
 
     public func encode(to encoder: Encoder) throws {
         if case let .unknown(_, raw) = self {
-            try raw.encode(to: encoder)
+            try encodeRawObject(raw, to: encoder)
             return
         }
         var c = encoder.container(keyedBy: CodingKeys.self)

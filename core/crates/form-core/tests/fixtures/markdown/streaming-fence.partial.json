@@ -1,8 +1,7 @@
 {
   "blocks": [
     {
-      "id": "b0-226e8190e648",
-      "partial": false,
+      "id": "b0-67af2f941503",
       "type": "paragraph",
       "spans": [
         {
@@ -12,8 +11,7 @@
       ]
     },
     {
-      "id": "b1-a0fb2b0f3f2e",
-      "partial": true,
+      "id": "b1-87751b645997",
       "type": "codeBlock",
       "language": "rust",
       "code": "fn main() {\n    let x = 1;\n",
@@ -68,7 +66,8 @@
           "len": 1,
           "scope": "punctuation.terminator.rust"
         }
-      ]
+      ],
+      "partial": true
     }
   ]
 }

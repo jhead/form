@@ -567,11 +567,12 @@ pub fn events() -> Vec<Event> {
 pub fn message_events() -> Vec<AssistantMessageEvent> {
     vec![
         AssistantMessageEvent::Start {
-            partial: AssistantMessage::pending(
-                "anthropic-messages",
-                "anthropic",
-                "claude-sonnet-4-5",
-            ),
+            // Not `AssistantMessage::pending`: that stamps `now_ms()`, and a fixture that
+            // changes on every dump is a diff nobody can read.
+            partial: AssistantMessage {
+                content: Vec::new(),
+                ..partial_message()
+            },
         },
         AssistantMessageEvent::TextStart {
             content_index: 0,
@@ -918,6 +919,23 @@ mod tests {
             "entries",
             file_names!(entries(), entry_file_name),
             decoder!(Entry),
+        );
+    }
+
+    /// A fixture that changes on every dump is noise in every diff — and `now_ms()` inside a
+    /// sample constructor is an easy way to get one.
+    #[test]
+    fn samples_are_deterministic() {
+        let once = serde_json::to_value(message_events()).expect("serializes");
+        let twice = serde_json::to_value(message_events()).expect("serializes");
+        assert_eq!(once, twice, "a sample carries a wall-clock value");
+        assert_eq!(
+            serde_json::to_value(events()).ok(),
+            serde_json::to_value(events()).ok()
+        );
+        assert_eq!(
+            serde_json::to_value(entries()).ok(),
+            serde_json::to_value(entries()).ok()
         );
     }
 

@@ -54,16 +54,19 @@ fn options() -> Options {
         | Options::ENABLE_TASKLISTS
 }
 
-/// The trailing block of an incomplete document is still being written: the renderer holds
-/// back its chrome until it settles. Its id is recomputed so the block re-renders when it
-/// stops being partial.
+/// The trailing block of an incomplete document is still being written. Only a code block
+/// carries chrome worth suppressing (spec 05 §2, spec 11 §4), so only it is marked; its id
+/// is recomputed so the block re-renders the moment it stops being partial.
 fn mark_partial(blocks: &mut [MarkdownBlock]) {
     let index = blocks.len().wrapping_sub(1);
     let Some(last) = blocks.last_mut() else {
         return;
     };
-    last.partial = true;
-    last.id = block_id(index, &last.kind, true);
+    let BlockKind::CodeBlock { partial, .. } = &mut last.kind else {
+        return;
+    };
+    *partial = true;
+    last.id = block_id(index, &last.kind);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -526,6 +529,7 @@ impl Builder {
             language: accum.language,
             code: accum.code,
             tokens,
+            partial: false,
         });
     }
 

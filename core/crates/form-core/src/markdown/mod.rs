@@ -106,6 +106,10 @@ pub enum BlockKind {
         language: Option<String>,
         code: String,
         tokens: Vec<CodeToken>,
+        /// True while the fence is still being written: the renderer holds back the copy
+        /// button and the rest of the block's chrome until the text stops moving.
+        #[serde(default)]
+        partial: bool,
     },
     List {
         ordered: bool,
@@ -143,15 +147,6 @@ pub enum BlockKind {
 pub struct MarkdownBlock {
     /// Stable across incremental re-parses so SwiftUI keeps view identity while streaming.
     pub id: String,
-    /// Set on the trailing block of an incomplete document: the renderer suppresses its
-    /// chrome (a copy button on a code block still being written, a table's footer rule)
-    /// until the text stops moving.
-    ///
-    /// Spec 05 §2 hangs this off `CodeBlock`; it lives on the block instead because a
-    /// paragraph mid-sentence needs the same treatment, and because `#[serde(flatten)]`
-    /// cannot carry the same key at both levels. A code block's JSON is unchanged.
-    #[serde(default)]
-    pub partial: bool,
     #[serde(flatten)]
     pub kind: BlockKind,
 }
@@ -169,23 +164,21 @@ pub fn parse(text: &str) -> MarkdownDoc {
 
 /// Parse a document that may end mid-construct.
 ///
-/// With `complete: false` the trailing construct is repaired before parsing and the last
-/// block is marked [`MarkdownBlock::partial`].
+/// With `complete: false` the trailing construct is repaired before parsing, and a trailing
+/// code block is marked `partial` so the renderer holds back its chrome.
 pub fn parse_streaming(text: &str, complete: bool) -> MarkdownDoc {
     parse::parse_doc(text, complete)
 }
 
 /// Identity is `(index, content hash)` — stable while a block's content is unchanged, so a
 /// growing document only invalidates its tail. The hash is over the serialized block, which
-/// is exactly the input the renderer sees; `partial` is folded in so the trailing block
-/// re-renders when it stops being partial and grows its chrome.
-fn block_id(index: usize, kind: &BlockKind, partial: bool) -> String {
-    use std::io::Write as _;
-
+/// is exactly the input the renderer sees. `CodeBlock`'s `partial` is part of that content,
+/// so the trailing fence changes identity — and re-renders with its chrome — the moment it
+/// finishes.
+fn block_id(index: usize, kind: &BlockKind) -> String {
     let mut hasher = Sha256::new();
     // Infallible: `Sha256`'s `io::Write` never errors and `BlockKind` always serializes.
     let _ = serde_json::to_writer(&mut hasher, kind);
-    let _ = hasher.write_all(&[u8::from(partial)]);
     let digest = hasher.finalize();
 
     let mut id = format!("b{index}-");
@@ -197,8 +190,7 @@ fn block_id(index: usize, kind: &BlockKind, partial: bool) -> String {
 
 fn block(index: usize, kind: BlockKind) -> MarkdownBlock {
     MarkdownBlock {
-        id: block_id(index, &kind, false),
-        partial: false,
+        id: block_id(index, &kind),
         kind,
     }
 }

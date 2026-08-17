@@ -92,9 +92,9 @@ enum ProtocolFixtures {
     }()
 
     /// A decode/re-encode pair for one type, erased so they can live in one table.
-    struct Codec {
+    struct Codec: Sendable {
         let name: String
-        let roundTrip: (Data) throws -> Data
+        let roundTrip: @Sendable (Data) throws -> Data
     }
 
     static func codec<T: Codable>(_ type: T.Type, _ name: String) -> Codec {
@@ -113,11 +113,27 @@ enum ProtocolFixtures {
         return nil
     }
 
+    /// `protocol-dump` files them by kind — `commands/`, `queries/`, `events/`,
+    /// `messageEvents/`, `entries/` — which resolves the tag collisions the unions have with
+    /// each other (`error` and `start` mean different things in two of them). Name and tag
+    /// are the fallback, so a directory W6 adds later still finds a type.
     private static func candidates(for data: Data, file: URL) -> [Codec] {
         let json = try? JSONValue(data: data)
         let tag = json?["type"]?.stringValue
         let stem = normalize(file.deletingPathExtension().lastPathComponent)
-        let path = file.path.lowercased()
+        let folder = normalize(file.deletingLastPathComponent().lastPathComponent)
+
+        // A known directory is binding, with no fallback. `CoreEvent` decodes anything with a
+        // `type` into `.unknown` and re-encodes it verbatim, so letting a command fixture fall
+        // through to it would turn a real drift into a green test.
+        switch folder {
+        case "commands": return [commandCodec]
+        case "events": return [eventCodec]
+        case "messageevents": return [assistantEventCodec]
+        case "entries": return [entryCodec]
+        case "queries": return [tag.flatMap { queryCodecs[$0] }].compactMap { $0 }
+        default: break
+        }
 
         var ordered: [Codec] = []
         func add(_ codec: Codec?) {
@@ -125,19 +141,8 @@ enum ProtocolFixtures {
             ordered.append(codec)
         }
 
-        // A `reason` field only ever appears on an AssistantMessageEvent, and `partial` only
-        // ever on a non-terminal one — enough to break the `error`/`start` tag collision with
-        // the outer event union.
-        let looksLikeAssistantEvent =
-            json?["partial"] != nil || json?["reason"] != nil
-            || path.contains("assistant") || path.contains("message_event")
-
-        if looksLikeAssistantEvent { add(byName["assistantmessageevent"]) }
-        if let tag { add(byTag[tag]) }
         add(byName[stem])
-        if path.contains("command") { add(byName["command"]) }
-        if path.contains("event") { add(byName["event"]) }
-        if path.contains("quer") { add(byTag[tag ?? ""]) }
+        if let tag { add(byTag[tag]) }
         for codec in all where !ordered.contains(where: { $0.name == codec.name }) {
             ordered.append(codec)
         }
@@ -154,6 +159,7 @@ enum ProtocolFixtures {
     static let eventCodec = codec(CoreEvent.self, "CoreEvent")
     static let assistantEventCodec = codec(
         AssistantMessageEvent.self, "AssistantMessageEvent")
+    static let entryCodec = codec(Entry.self, "Entry")
 
     /// Queries are separate types (each knows its `Response`), so they are registered by tag.
     static let queryCodecs: [String: Codec] = [

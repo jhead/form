@@ -76,10 +76,10 @@ public struct SegmentedToggle<Value: Hashable>: View {
 }
 
 #Preview("SegmentedToggle") {
-    ThemePreviewSegmented()
+    SegmentedTogglePreview()
 }
 
-private struct ThemePreviewSegmented: View {
+private struct SegmentedTogglePreview: View {
     @State private var route = "home"
     @State private var period = "30d"
 

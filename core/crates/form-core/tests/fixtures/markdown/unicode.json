@@ -1,8 +1,7 @@
 {
   "blocks": [
     {
-      "id": "b0-c969d8ae763a",
-      "partial": false,
+      "id": "b0-9c0d78ecdacd",
       "type": "paragraph",
       "spans": [
         {
@@ -12,8 +11,7 @@
       ]
     },
     {
-      "id": "b1-70777380eee4",
-      "partial": false,
+      "id": "b1-0b49bcf3541f",
       "type": "codeBlock",
       "language": "rust",
       "code": "let party = \"🎉 日本語 café\";\nlet plain = \"ascii\";\n",
@@ -78,11 +76,11 @@
           "len": 1,
           "scope": "punctuation.terminator.rust"
         }
-      ]
+      ],
+      "partial": false
     },
     {
-      "id": "b2-545983939322",
-      "partial": false,
+      "id": "b2-cd9c88262c3d",
       "type": "codeBlock",
       "code": "🎉 日本語 café with no language\n",
       "tokens": [
@@ -91,11 +89,11 @@
           "len": 29,
           "scope": "plain"
         }
-      ]
+      ],
+      "partial": false
     },
     {
-      "id": "b3-5413f7f2c310",
-      "partial": false,
+      "id": "b3-661b2b9f3724",
       "type": "paragraph",
       "spans": [
         {

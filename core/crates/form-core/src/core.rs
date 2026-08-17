@@ -3,14 +3,20 @@
 //! `form-cli` and the Rust tests drive this directly; `form-ffi` is a thin JSON-in/JSON-out
 //! wrapper over it. Keeping the C details out of here is what lets a future subprocess
 //! transport reuse the same object.
+//!
+//! This file is the one place where the workstreams meet: it routes the frozen protocol
+//! (spec 00) onto the store (W1), the harness (W2), the stats engine (W3), the catalog,
+//! settings and context accounting (W4), and the markdown parser (W5).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+use base64::Engine as _;
 use tokio::runtime::Runtime;
 
-use crate::app::{self, Store};
+use crate::app::TurnRecord;
+use crate::app::{self, AddAttachment, AttachmentSource, SearchScope, Store, StoreOptions};
 use crate::catalog;
 use crate::context;
 use crate::error::{CoreError, Result};
@@ -19,10 +25,14 @@ use crate::harness::{AbortSignal, Harness, RunContext, RunRequest, StubHarness};
 use crate::markdown;
 use crate::protocol::*;
 use crate::settings::{Settings, SettingsStore};
-use crate::stats::UsageStats;
+use crate::stats;
+
+/// Prompts sent while a run is streaming, per session (F1.7).
+type PromptQueues = Arc<Mutex<HashMap<String, VecDeque<String>>>>;
 
 pub struct Core {
     config: CoreConfig,
+    data_dir: PathBuf,
     store: Arc<Store>,
     settings_store: SettingsStore,
     settings: Mutex<Settings>,
@@ -31,14 +41,32 @@ pub struct Core {
     runtime: Runtime,
     /// Live runs, keyed by session id, so `abortRun` can reach the right one.
     active: Arc<Mutex<HashMap<String, AbortSignal>>>,
+    queued: PromptQueues,
+    /// So a run finishing on a worker thread can start the next queued run.
+    me: std::sync::Weak<Core>,
+    /// A corrupt settings file is found during construction, before anyone can subscribe.
+    /// Held here and emitted on first subscribe rather than dropped on the floor.
+    pending_issue: Mutex<Option<EventKind>>,
 }
 
 impl Core {
     pub fn new(config: CoreConfig) -> Result<Arc<Self>> {
         let data_dir = PathBuf::from(&config.data_dir);
-        let store = Arc::new(Store::open(&data_dir)?);
+        let store = Arc::new(Store::open_with(
+            &data_dir,
+            StoreOptions {
+                seed_mock_data: config.seed_mock_data,
+                ..Default::default()
+            },
+        )?);
+
         let settings_store = SettingsStore::new(&data_dir);
-        let settings = settings_store.load();
+        let outcome = settings_store.load_reporting();
+        let pending_issue = outcome.issue.map(|issue| EventKind::Error {
+            code: issue.code,
+            message: issue.message,
+            detail: issue.detail,
+        });
 
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
@@ -47,28 +75,37 @@ impl Core {
             .build()
             .map_err(|e| CoreError::Internal(format!("tokio runtime: {e}")))?;
 
-        let core = Arc::new(Self {
+        Ok(Arc::new_cyclic(|me| Self {
+            me: me.clone(),
             config,
+            data_dir,
             store,
             settings_store,
-            settings: Mutex::new(settings),
+            settings: Mutex::new(outcome.settings),
             harness: Arc::new(StubHarness),
             bus: EventBus::new(),
             runtime,
             active: Arc::new(Mutex::new(HashMap::new())),
-        });
-
-        // TODO(W1): seed the mock corpus here when `seed_mock_data` is set and the store is
-        // empty — spec 01 §6. The dashboard's first-launch content depends on it.
-        Ok(core)
+            queued: Arc::new(Mutex::new(HashMap::new())),
+            pending_issue: Mutex::new(pending_issue),
+        }))
     }
 
     pub fn subscribe(&self, listener: Listener) -> i32 {
-        self.bus.subscribe(listener)
+        let token = self.bus.subscribe(listener);
+        // Deliver anything that happened before there was anyone to tell.
+        if let Some(kind) = self.pending_issue.lock().unwrap().take() {
+            self.bus.emit_kind(kind);
+        }
+        token
     }
 
     pub fn unsubscribe(&self, token: i32) {
         self.bus.unsubscribe(token);
+    }
+
+    fn settings_snapshot(&self) -> Settings {
+        self.settings.lock().unwrap().clone()
     }
 
     // ------------------------------------------------------------ queries
@@ -92,14 +129,26 @@ impl Core {
                 Envelope::ok(self.store.list_sessions(include_archived)?)
             }
             Query::GetSession { session_id } => Envelope::ok(self.store.get_session(&session_id)?),
-            Query::GetSettings => Envelope::ok(self.settings.lock().unwrap().clone()),
+
+            // Global search skips archived sessions; a scoped find inside an open one does
+            // not — see W1's note in `app::search`.
+            Query::SearchSessions { q, limit } => Envelope::ok(self.store.search(
+                &q,
+                SearchScope::All,
+                limit.unwrap_or(30),
+            )?),
+            Query::SearchInSession { session_id, q } => Envelope::ok(self.store.search(
+                &q,
+                SearchScope::Session(session_id),
+                200,
+            )?),
+
+            Query::GetSettings => Envelope::ok(self.settings_snapshot()),
             Query::GetCatalog => Envelope::ok(catalog::builtin()),
-            Query::GetStats { range, .. } => Envelope::ok(UsageStats::empty(range)),
-            Query::GetContextUsage { session_id } => {
-                let session = self.store.get_session(&session_id)?;
-                let model = catalog::resolve(&session.summary.model_ref);
-                Envelope::ok(context::context_usage(&session, model.as_ref()))
+            Query::GetStats { range, tz } => {
+                Envelope::ok(stats::compute_at(&self.data_dir, range, &tz)?)
             }
+            Query::GetContextUsage { session_id } => Envelope::ok(self.context_usage(&session_id)?),
             Query::RenderMarkdown { text, complete } => {
                 Envelope::ok(markdown::parse_streaming(&text, complete.unwrap_or(true)))
             }
@@ -108,11 +157,25 @@ impl Core {
                 let root = session.summary.workspace_root.as_ref().map(PathBuf::from);
                 Envelope::ok(app::resolve_in_workspace(root.as_deref(), &path)?)
             }
-            // TODO: SearchSessions/SearchInSession → W1; GetAttachment/ListRecentRoots → W1.
-            other => {
-                return Err(CoreError::NotImplemented(query_name(&other)));
+            Query::GetAttachment { attachment_id } => {
+                Envelope::ok(self.store.get_attachment(&attachment_id)?)
             }
+            Query::ListRecentRoots => Envelope::ok(self.store.list_recent_roots()?),
         })
+    }
+
+    fn context_usage(&self, session_id: &str) -> Result<ContextUsage> {
+        let session = self.store.get_session(session_id)?;
+        let model = catalog::resolve_ref(&session.summary.model_ref);
+        Ok(context::context_usage(&session, model))
+    }
+
+    /// Recompute and publish the ring (F10). Cheap enough to call on every turn boundary,
+    /// and doing it here means the view never has to estimate anything itself.
+    fn emit_context_usage(&self, session_id: &str) {
+        if let Ok(usage) = self.context_usage(session_id) {
+            self.bus.emit_kind(EventKind::ContextUsageChanged { usage });
+        }
     }
 
     // ------------------------------------------------------------ commands
@@ -132,89 +195,273 @@ impl Core {
     }
 
     fn dispatch(&self, command: Command, command_id: String) -> Result<()> {
+        let cmd = Some(command_id);
         match command {
+            // --- sessions ---
             Command::CreateSession {
                 group_id,
                 title,
                 workspace_root,
                 model_ref,
             } => {
-                let session =
-                    self.store
-                        .create_session(group_id, title, workspace_root, model_ref)?;
-                self.bus
-                    .emit_for(EventKind::SessionCreated { session }, Some(command_id));
+                let model_ref = model_ref
+                    .unwrap_or_else(|| self.settings_snapshot().defaults.model_ref.clone());
+                let session = self.store.create_session(
+                    group_id,
+                    title,
+                    workspace_root.clone(),
+                    Some(model_ref),
+                )?;
+                if let Some(root) = workspace_root {
+                    let _ = self.store.touch_recent_root(&root);
+                }
+                self.emit(EventKind::SessionCreated { session }, &cmd);
                 Ok(())
             }
 
             Command::SendPrompt {
                 session_id, text, ..
-            } => self.start_run(session_id, text, command_id),
+            } => self.start_run(session_id, text, cmd),
 
             Command::AbortRun { session_id } => {
                 if let Some(signal) = self.active.lock().unwrap().get(&session_id) {
                     signal.abort();
                 }
+                // Anything the user queued behind an aborted run is no longer wanted.
+                self.queued.lock().unwrap().remove(&session_id);
                 Ok(())
             }
 
-            Command::RenameSession { .. }
-            | Command::DeleteSession { .. }
-            | Command::ArchiveSession { .. }
-            | Command::MoveSession { .. } => {
-                Err(CoreError::NotImplemented("session mutation (W1)"))
+            Command::RenameSession { session_id, title } => {
+                let session = self.store.rename_session(&session_id, &title)?;
+                self.emit(EventKind::SessionUpdated { session }, &cmd);
+                Ok(())
+            }
+            Command::DeleteSession { session_id } => {
+                self.store.delete_session(&session_id)?;
+                self.emit(EventKind::SessionDeleted { session_id }, &cmd);
+                self.bus.emit_kind(EventKind::StatsInvalidated);
+                Ok(())
+            }
+            Command::ArchiveSession {
+                session_id,
+                archived,
+            } => {
+                let session = self.store.set_archived(&session_id, archived)?;
+                self.emit(EventKind::SessionUpdated { session }, &cmd);
+                Ok(())
+            }
+            Command::PinSession { session_id, pinned } => {
+                let session = self.store.set_pinned(&session_id, pinned)?;
+                self.emit(EventKind::SessionUpdated { session }, &cmd);
+                Ok(())
+            }
+            Command::MoveSession {
+                session_id,
+                group_id,
+                index,
+            } => {
+                self.store
+                    .move_session(&session_id, group_id.as_deref(), index)?;
+                let session = self.store.get_summary(&session_id)?;
+                self.emit(EventKind::SessionUpdated { session }, &cmd);
+                self.emit_groups(&cmd);
+                Ok(())
+            }
+            Command::SetSessionModel {
+                session_id,
+                model_ref,
+            } => {
+                let session = self.store.set_session_model(&session_id, &model_ref)?;
+                self.emit(EventKind::SessionUpdated { session }, &cmd);
+                // The window and output reserve changed with the model (F10.1).
+                self.emit_context_usage(&session_id);
+                Ok(())
+            }
+            Command::SetWorkspaceRoot { session_id, path } => {
+                if let Some(root) = path.as_deref() {
+                    let _ = self.store.touch_recent_root(root);
+                }
+                let session = self.store.set_workspace_root(&session_id, path)?;
+                self.emit(EventKind::SessionUpdated { session }, &cmd);
+                Ok(())
+            }
+            Command::BranchFromMessage {
+                session_id,
+                entry_id,
+            } => {
+                let session = self.store.branch_from_message(&session_id, &entry_id)?;
+                self.emit(EventKind::SessionCreated { session }, &cmd);
+                Ok(())
+            }
+            Command::RetryMessage {
+                session_id,
+                entry_id,
+            } => {
+                // Rewind to just before the message, then replay it as a fresh prompt.
+                let prompt = self.user_text_of(&session_id, &entry_id)?;
+                self.store.truncate_after(&session_id, &entry_id)?;
+                self.store.truncate_after(&session_id, &entry_id)?;
+                let session = self.store.get_summary(&session_id)?;
+                self.emit(EventKind::SessionUpdated { session }, &cmd);
+                self.start_run(session_id, prompt, cmd)
             }
 
+            // --- groups ---
+            Command::CreateGroup { name } => {
+                self.store.create_group(&name)?;
+                self.emit_groups(&cmd);
+                Ok(())
+            }
+            Command::RenameGroup { group_id, name } => {
+                let groups = self.store.rename_group(&group_id, &name)?;
+                self.emit(EventKind::GroupsChanged { groups }, &cmd);
+                Ok(())
+            }
+            Command::DeleteGroup { group_id } => {
+                let groups = self.store.delete_group(&group_id)?;
+                // Its sessions were orphaned to Ungrouped rather than deleted, so their group
+                // membership changed too. `groups_changed` is the app's cue to re-read the
+                // session list; there is deliberately no second event for it.
+                self.emit(EventKind::GroupsChanged { groups }, &cmd);
+                Ok(())
+            }
+            Command::ReorderGroup { group_id, index } => {
+                let groups = self.store.reorder_group(&group_id, index)?;
+                self.emit(EventKind::GroupsChanged { groups }, &cmd);
+                Ok(())
+            }
+            Command::SetGroupCollapsed {
+                group_id,
+                collapsed,
+            } => {
+                let groups = self.store.set_group_collapsed(&group_id, collapsed)?;
+                self.emit(EventKind::GroupsChanged { groups }, &cmd);
+                Ok(())
+            }
+
+            // --- attachments ---
+            Command::AddAttachment {
+                session_id,
+                path,
+                bytes_base64,
+                filename,
+                mime,
+            } => {
+                let source = match (path, bytes_base64) {
+                    (Some(path), _) => AttachmentSource::Path(path),
+                    (None, Some(b64)) => AttachmentSource::Bytes(
+                        base64::engine::general_purpose::STANDARD
+                            .decode(b64.as_bytes())
+                            .map_err(|e| CoreError::InvalidRequest(format!("bytesBase64: {e}")))?,
+                    ),
+                    (None, None) => {
+                        return Err(CoreError::InvalidRequest(
+                            "addAttachment needs either path or bytesBase64".into(),
+                        ))
+                    }
+                };
+                let attachment = self.store.add_attachment(AddAttachment {
+                    session_id: session_id.clone(),
+                    source,
+                    filename,
+                    mime,
+                })?;
+                self.emit(EventKind::AttachmentAdded { attachment }, &cmd);
+                if let Some(session_id) = session_id {
+                    self.emit_context_usage(&session_id);
+                }
+                Ok(())
+            }
+            Command::RemoveAttachment { attachment_id } => {
+                self.store.remove_attachment(&attachment_id)?;
+                self.emit(EventKind::AttachmentRemoved { attachment_id }, &cmd);
+                Ok(())
+            }
+
+            // --- settings ---
             Command::UpdateSettings { settings } => {
                 let mut parsed: Settings = serde_json::from_value(settings)?;
-                parsed.normalize();
+                // The store's normalize, not the document's: it also restores fields the app
+                // is not allowed to set, like the real data directory.
+                self.settings_store.normalize(&mut parsed);
                 self.settings_store.save(&parsed)?;
                 let value = serde_json::to_value(&parsed)?;
                 *self.settings.lock().unwrap() = parsed;
-                self.bus.emit_for(
-                    EventKind::SettingsChanged { settings: value },
-                    Some(command_id),
-                );
+                self.emit(EventKind::SettingsChanged { settings: value }, &cmd);
                 Ok(())
             }
-
-            _ => Err(CoreError::NotImplemented("command")),
         }
     }
 
+    fn emit(&self, kind: EventKind, command_id: &Option<String>) {
+        self.bus.emit_for(kind, command_id.clone());
+    }
+
+    fn emit_groups(&self, command_id: &Option<String>) {
+        if let Ok(groups) = self.store.list_groups() {
+            self.emit(EventKind::GroupsChanged { groups }, command_id);
+        }
+    }
+
+    fn user_text_of(&self, session_id: &str, entry_id: &str) -> Result<String> {
+        let session = self.store.get_session(session_id)?;
+        session
+            .entries
+            .iter()
+            .find(|e| e.id == entry_id)
+            .and_then(|e| match &e.kind {
+                EntryKind::Message {
+                    message: Message::User(m),
+                } => Some(m.content.to_text()),
+                _ => None,
+            })
+            .ok_or_else(|| CoreError::InvalidRequest(format!("{entry_id} is not a user message")))
+    }
+
     /// Spawn a run on the tokio runtime. Returns immediately; everything else is events.
-    fn start_run(&self, session_id: String, prompt: String, command_id: String) -> Result<()> {
-        {
-            let active = self.active.lock().unwrap();
-            if active.contains_key(&session_id) {
-                // TODO(W2): queue instead of rejecting, per F1.7.
-                return Err(CoreError::RunAlreadyActive(session_id));
-            }
+    fn start_run(
+        &self,
+        session_id: String,
+        prompt: String,
+        command_id: Option<String>,
+    ) -> Result<()> {
+        // Sending during a run queues rather than failing (F1.7). The harness pulls the
+        // prompt at its next turn boundary and appends the user entry there, so the
+        // transcript order matches what actually reached the model.
+        if self.active.lock().unwrap().contains_key(&session_id) {
+            self.queued
+                .lock()
+                .unwrap()
+                .entry(session_id)
+                .or_default()
+                .push_back(prompt);
+            return Ok(());
         }
 
         let session = self.store.get_session(&session_id)?;
 
-        // The user's message is part of the transcript before the run starts, so the UI can
-        // render it immediately rather than waiting for the first assistant event.
+        // The user's message joins the transcript before the run starts, so the UI can render
+        // it immediately rather than waiting for the first assistant event.
         let user_entry = self.store.append_entry(
             &session_id,
             EntryKind::Message {
                 message: Message::User(UserMessage::text(prompt.clone())),
             },
         )?;
-        self.bus.emit_for(
+        self.emit(
             EventKind::MessageStart {
                 session_id: session_id.clone(),
                 entry: user_entry.clone(),
             },
-            Some(command_id.clone()),
+            &command_id,
         );
-        self.bus.emit_for(
+        self.emit(
             EventKind::MessageEnd {
                 session_id: session_id.clone(),
                 entry: user_entry,
             },
-            Some(command_id.clone()),
+            &command_id,
         );
 
         if let Some(updated) = self.store.maybe_derive_title(&session_id, &prompt)? {
@@ -228,27 +475,35 @@ impl Core {
             .unwrap()
             .insert(session_id.clone(), signal.clone());
 
+        let settings = self.settings_snapshot();
         let ctx: Arc<dyn RunContext> = Arc::new(CoreRunContext {
+            session_id: session_id.clone(),
             store: self.store.clone(),
             bus: self.bus.clone(),
-            command_id: Some(command_id),
+            queued: self.queued.clone(),
+            command_id: command_id.clone(),
             speed: self.config.harness_speed,
+            system_prompt: settings.defaults.system_prompt.clone(),
         });
 
         let request = RunRequest {
             session_id: session_id.clone(),
             run_id: format!("run_{}", uuid::Uuid::new_v4().simple()),
-            command_id: None,
+            command_id: command_id.clone(),
             prompt,
             model: session.summary.model_ref.clone(),
             workspace_root: session.summary.workspace_root.clone(),
-            turn_index: 0,
+            // Seeding content from the session's real turn count is what stops a long
+            // session from answering every question the same way.
+            turn_index: self.store.count_turns(&session_id).unwrap_or(0) as u32,
         };
 
         let harness = self.harness.clone();
         let store = self.store.clone();
         let bus = self.bus.clone();
         let active = self.active.clone();
+        let queued = self.queued.clone();
+        let me = self.me.clone();
 
         if let Ok(s) = store.set_status(&session_id, SessionStatus::Streaming) {
             bus.emit_kind(EventKind::SessionUpdated { session: s });
@@ -257,10 +512,28 @@ impl Core {
         self.runtime.spawn(async move {
             harness.run(request, ctx, signal).await;
             active.lock().unwrap().remove(&session_id);
+
             if let Ok(s) = store.set_status(&session_id, SessionStatus::Idle) {
                 bus.emit_kind(EventKind::SessionUpdated { session: s });
             }
+            if let Ok(session) = store.get_session(&session_id) {
+                let model = catalog::resolve_ref(&session.summary.model_ref);
+                bus.emit_kind(EventKind::ContextUsageChanged {
+                    usage: context::context_usage(&session, model),
+                });
+            }
             bus.emit_kind(EventKind::StatsInvalidated);
+
+            // A prompt queued between the run's last turn boundary and this point would
+            // otherwise be stranded, because the harness has already stopped asking for one.
+            // Starting a fresh run is the only correct recovery.
+            let stranded = queued
+                .lock()
+                .ok()
+                .and_then(|mut q| q.get_mut(&session_id).and_then(|q| q.pop_front()));
+            if let (Some(prompt), Some(core)) = (stranded, me.upgrade()) {
+                let _ = core.start_run(session_id, prompt, None);
+            }
         });
 
         Ok(())
@@ -268,10 +541,13 @@ impl Core {
 }
 
 struct CoreRunContext {
+    session_id: String,
     store: Arc<Store>,
     bus: EventBus,
+    queued: PromptQueues,
     command_id: Option<String>,
     speed: f64,
+    system_prompt: String,
 }
 
 impl RunContext for CoreRunContext {
@@ -290,21 +566,37 @@ impl RunContext for CoreRunContext {
     fn speed(&self) -> f64 {
         self.speed
     }
-}
 
-fn query_name(q: &Query) -> &'static str {
-    match q {
-        Query::ListSessions { .. } => "listSessions",
-        Query::GetSession { .. } => "getSession",
-        Query::SearchSessions { .. } => "searchSessions",
-        Query::SearchInSession { .. } => "searchInSession",
-        Query::GetSettings => "getSettings",
-        Query::GetCatalog => "getCatalog",
-        Query::GetStats { .. } => "getStats",
-        Query::GetContextUsage { .. } => "getContextUsage",
-        Query::RenderMarkdown { .. } => "renderMarkdown",
-        Query::ResolvePath { .. } => "resolvePath",
-        Query::GetAttachment { .. } => "getAttachment",
-        Query::ListRecentRoots => "listRecentRoots",
+    fn take_queued_prompt(&self) -> Option<String> {
+        self.queued
+            .lock()
+            .ok()?
+            .get_mut(&self.session_id)
+            .and_then(|q| q.pop_front())
+    }
+
+    fn prompt_overhead_tokens(&self) -> Option<u64> {
+        let session = self.store.get_session(&self.session_id).ok()?;
+        Some(
+            context::system_prompt_tokens(&session, &self.system_prompt)
+                + context::tool_schema_tokens(),
+        )
+    }
+
+    fn record_turn(&self, turn: TurnRecord) {
+        let tokens = turn.usage.total_tokens;
+        let session_id = turn.session_id.clone();
+        if self.store.record_turn(turn).is_ok() {
+            if let Ok(session) = self.store.add_tokens(&session_id, tokens) {
+                self.bus.emit_kind(EventKind::SessionUpdated { session });
+            }
+            // The ring moves as each turn lands, not only when the whole run ends (F10.4).
+            if let Ok(session) = self.store.get_session(&session_id) {
+                let model = catalog::resolve_ref(&session.summary.model_ref);
+                self.bus.emit_kind(EventKind::ContextUsageChanged {
+                    usage: context::context_usage(&session, model),
+                });
+            }
+        }
     }
 }

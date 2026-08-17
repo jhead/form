@@ -1,8 +1,7 @@
 {
   "blocks": [
     {
-      "id": "b0-8caff361b1ea",
-      "partial": false,
+      "id": "b0-db3526e7e3f0",
       "type": "paragraph",
       "spans": [
         {
@@ -12,8 +11,7 @@
       ]
     },
     {
-      "id": "b1-4ce78557aafd",
-      "partial": false,
+      "id": "b1-e3a663822f32",
       "type": "list",
       "ordered": false,
       "start": 1,
@@ -22,8 +20,7 @@
         {
           "blocks": [
             {
-              "id": "b0-b6334c99b274",
-              "partial": false,
+              "id": "b0-13266558d5ef",
               "type": "paragraph",
               "spans": [
                 {
@@ -43,8 +40,7 @@
         {
           "blocks": [
             {
-              "id": "b0-e08bf9981385",
-              "partial": false,
+              "id": "b0-9f3cd234569b",
               "type": "paragraph",
               "spans": [
                 {
@@ -64,8 +60,7 @@
         {
           "blocks": [
             {
-              "id": "b0-671a28bce87d",
-              "partial": false,
+              "id": "b0-0c1b3e992288",
               "type": "paragraph",
               "spans": [
                 {
@@ -85,8 +80,7 @@
         {
           "blocks": [
             {
-              "id": "b0-3f8f0a779d61",
-              "partial": false,
+              "id": "b0-74b069f2cfda",
               "type": "paragraph",
               "spans": [
                 {
@@ -106,8 +100,7 @@
         {
           "blocks": [
             {
-              "id": "b0-ce343f4cb759",
-              "partial": false,
+              "id": "b0-f435d7b09ffa",
               "type": "paragraph",
               "spans": [
                 {
@@ -121,8 +114,7 @@
         {
           "blocks": [
             {
-              "id": "b0-b77aa8c044ec",
-              "partial": false,
+              "id": "b0-b4161c189c15",
               "type": "paragraph",
               "spans": [
                 {
@@ -136,8 +128,7 @@
         {
           "blocks": [
             {
-              "id": "b0-524ba5538646",
-              "partial": false,
+              "id": "b0-c8059ebb416e",
               "type": "paragraph",
               "spans": [
                 {
@@ -151,8 +142,7 @@
         {
           "blocks": [
             {
-              "id": "b0-8c493c2ca419",
-              "partial": false,
+              "id": "b0-9f1a52698060",
               "type": "paragraph",
               "spans": [
                 {
@@ -166,8 +156,7 @@
       ]
     },
     {
-      "id": "b2-ceb0daa8766f",
-      "partial": false,
+      "id": "b2-280c94c9aad8",
       "type": "paragraph",
       "spans": [
         {
@@ -177,14 +166,12 @@
       ]
     },
     {
-      "id": "b3-360288b9cfde",
-      "partial": false,
+      "id": "b3-e9b2532dd88d",
       "type": "html",
       "raw": "<div onclick=\"steal()\"><script>evil()</script></div>\n"
     },
     {
-      "id": "b4-ae71e03d7b16",
-      "partial": false,
+      "id": "b4-a536fc392433",
       "type": "paragraph",
       "spans": [
         {

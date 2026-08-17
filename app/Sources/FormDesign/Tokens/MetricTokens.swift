@@ -87,6 +87,23 @@ public struct MetricTokens: Sendable, Equatable, Codable {
     public var progressBarHeight: CGFloat = 3
     public var caretWidth: CGFloat = 2
 
+    // Numbers the consuming specs name explicitly. They live here because `FormDesign` is
+    // the only module allowed to hold a layout literal — not because they are general.
+    /// Insertion line while dragging a session between groups (spec 09 §3).
+    public var dropIndicator: CGFloat = 2
+    /// Leading rule on a blockquote (spec 11 §2).
+    public var quoteRuleWidth: CGFloat = 2
+    /// Zebra striping on table rows, as a tint over `surface` (spec 11 §2).
+    public var zebraOpacity: Double = 0.03
+    /// Cap on an inline image so streaming does not reflow the transcript (spec 11 §2).
+    public var imageMaxHeight: CGFloat = 400
+    /// Attachment tray chip and its thumbnail (spec 13, Part B).
+    public var attachmentChipHeight: CGFloat = 56
+    public var thumbnail: CGFloat = 40
+    /// Command palette panel (spec 14 §3).
+    public var paletteWidth: CGFloat = 640
+    public var paletteTopFraction: CGFloat = 0.2
+
     // Containers
     public var popoverPadding: CGFloat = 12
     public var popoverRadius: CGFloat = 10

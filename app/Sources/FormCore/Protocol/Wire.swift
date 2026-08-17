@@ -193,7 +193,7 @@ extension AssistantContent: Codable {
             try c.encode("toolCall", forKey: .type)
             try v.encode(to: encoder)
         case let .unknown(_, raw):
-            try raw.encode(to: encoder)
+            try encodeRawObject(raw, to: encoder)
         }
     }
 }
@@ -234,7 +234,7 @@ extension InputContent: Codable {
             try c.encode("image", forKey: .type)
             try v.encode(to: encoder)
         case let .unknown(_, raw):
-            try raw.encode(to: encoder)
+            try encodeRawObject(raw, to: encoder)
         }
     }
 }
@@ -467,7 +467,7 @@ extension Message: Codable {
             try c.encode("toolResult", forKey: .role)
             try m.encode(to: encoder)
         case let .unknown(_, raw):
-            try raw.encode(to: encoder)
+            try encodeRawObject(raw, to: encoder)
         }
     }
 }
@@ -617,7 +617,7 @@ extension AssistantMessageEvent: Codable {
 
     public func encode(to encoder: Encoder) throws {
         if case let .unknown(_, raw) = self {
-            try raw.encode(to: encoder)
+            try encodeRawObject(raw, to: encoder)
             return
         }
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -714,7 +714,7 @@ extension EntryKind: Codable {
 
     public func encode(to encoder: Encoder) throws {
         if case let .unknown(_, raw) = self {
-            try raw.encode(to: encoder)
+            try encodeRawObject(raw, to: encoder)
             return
         }
         var c = encoder.container(keyedBy: CodingKeys.self)

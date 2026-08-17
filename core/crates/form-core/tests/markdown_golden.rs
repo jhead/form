@@ -76,6 +76,9 @@ fn fixtures_match_their_golden_json() {
 /// The golden JSON is what Swift decodes, so it must also decode back into the Rust types.
 #[test]
 fn golden_json_round_trips() {
+    if std::env::var_os("FORM_UPDATE_GOLDEN").is_some() {
+        return; // the other test is rewriting these files right now
+    }
     for source_path in fixtures() {
         let golden_path = source_path.with_extension("json");
         let Ok(json) = fs::read_to_string(&golden_path) else {

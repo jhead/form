@@ -291,8 +291,15 @@ public final class ChatStore {
                     ? partial.content[i] : .toolCall(ToolCall(id: "", name: ""))
             }
             partialToolArguments[i] = ""
-        case let .toolCallDelta(i, delta, _):
+        case let .toolCallDelta(i, delta, partial):
             partialToolArguments[i, default: ""] += delta
+            // The core salvages the arguments as soon as the accumulated fragments happen to
+            // parse, so the block itself changes mid-stream. Adopting that one block keeps
+            // this incremental while staying identical to `partial`.
+            if partial.content.indices.contains(i) {
+                ensureBlock(at: i, index: index) { partial.content[i] }
+                mutate(at: index) { message in message.content[i] = partial.content[i] }
+            }
         case let .toolCallEnd(i, toolCall, _):
             ensureBlock(at: i, index: index) { .toolCall(toolCall) }
             mutate(at: index) { message in message.content[i] = .toolCall(toolCall) }
