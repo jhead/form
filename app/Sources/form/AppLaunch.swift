@@ -37,8 +37,14 @@ final class AppLaunch {
         phase = .starting
 
         do {
+            // Overridable so the app can be driven for screenshots and manual checks
+            // without touching the real data directory or hitting a provider. Absent from a
+            // normal launch, which is the only reason it is safe to read here.
+            let env = ProcessInfo.processInfo.environment
             let config = CoreConfig(
-                dataDir: CoreConfig.defaultDataDir(), seedMockData: false)
+                dataDir: env["FORM_DATA_DIR"] ?? CoreConfig.defaultDataDir(),
+                seedMockData: env["FORM_SEED_MOCK_DATA"] == "1",
+                harness: env["FORM_HARNESS"] == "stub" ? .stub : .pi)
             let stores = try CoreStores(config: config)
             try await stores.start()
 

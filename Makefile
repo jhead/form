@@ -18,7 +18,8 @@ CORE_LIB_DIR := $(abspath $(CORE_DIR)/target/$(PROFILE))
 LINK_FLAGS   := -Xlinker -L$(CORE_LIB_DIR)
 
 .PHONY: all debug release core app bundle run test test-rust test-swift lint fmt \
-        headers check-symbols cli clean xcode verify-xcode verify-live form.xcodeproj
+        headers check-symbols cli clean xcode verify-xcode verify-live screenshot \
+        form.xcodeproj
 
 all: bundle
 
@@ -43,6 +44,11 @@ bundle: app
 
 run: bundle
 	@open $(APP_BUNDLE)
+
+## Capture the README screenshot. Seeded demo data and the stub harness, so it needs no key
+## and never touches the real database. Requires an unlocked screen.
+screenshot:
+	@bash scripts/screenshot.sh chat docs/images/chat.png
 
 ## Prove the live path: real requests to the configured provider, both halves of the stack.
 ## Needs a key in .env or the Keychain, and a network. Excluded from `make test` on purpose,
