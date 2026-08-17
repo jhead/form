@@ -328,7 +328,12 @@ async fn aborting_a_live_run_reports_aborted() {
 }
 
 /// The Providers pane must agree with what the core can actually resolve.
+///
+/// `#[ignore]`d with the rest of this file: it needs a credential on the machine, and a fresh
+/// clone has none. It failed on exactly that — a test that only passes on the author's laptop
+/// is worse than no test, because it turns a clean checkout into a red build.
 #[test]
+#[ignore]
 fn has_key_reflects_a_key_supplied_through_the_environment() {
     form_core::env::load(std::path::Path::new("."));
     let resolvable = form_core::credentials::providers_with_keys();
@@ -336,6 +341,20 @@ fn has_key_reflects_a_key_supplied_through_the_environment() {
         resolvable.iter().any(|p| p == "openrouter"),
         "the .env key should make openrouter resolvable, got {resolvable:?}"
     );
+}
+
+/// What *can* be asserted without a credential: resolution is total and never panics, and a
+/// provider nobody has a key for is simply absent.
+#[test]
+fn credential_resolution_is_total_without_any_key() {
+    let resolvable = form_core::credentials::providers_with_keys();
+    for provider in &resolvable {
+        assert!(
+            form_core::credentials::KNOWN_PROVIDERS.contains(&provider.as_str()),
+            "{provider} is not a provider the core looks up"
+        );
+    }
+    assert_eq!(form_core::credentials::api_key("nope-not-a-provider"), None);
 }
 
 /// Print the streamed event shape, to compare delta application against the provider's own
