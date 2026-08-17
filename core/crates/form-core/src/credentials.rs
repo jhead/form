@@ -69,26 +69,6 @@ fn keychain_key(_provider: &str) -> Option<String> {
     None
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn env_is_the_fallback_when_the_keychain_has_nothing() {
-        // A provider nobody has a key for resolves to nothing rather than panicking.
-        assert_eq!(api_key("a-provider-that-does-not-exist"), None);
-    }
-
-    #[test]
-    fn the_known_provider_list_is_deduplicated() {
-        let mut sorted = KNOWN_PROVIDERS.to_vec();
-        sorted.sort_unstable();
-        let before = sorted.len();
-        sorted.dedup();
-        assert_eq!(before, sorted.len(), "a provider is listed twice");
-    }
-}
-
 /// A [`pi_auth::CredentialStore`] that reads on every call.
 ///
 /// The alternative was seeding an in-memory store once at startup, which meant a key typed
@@ -141,5 +121,25 @@ impl pi_auth::CredentialStore for LiveCredentialStore {
         Err(pi_auth::AuthError::store(format!(
             "form stores credentials in the Keychain; {provider_id} cannot be deleted from the core"
         )))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn env_is_the_fallback_when_the_keychain_has_nothing() {
+        // A provider nobody has a key for resolves to nothing rather than panicking.
+        assert_eq!(api_key("a-provider-that-does-not-exist"), None);
+    }
+
+    #[test]
+    fn the_known_provider_list_is_deduplicated() {
+        let mut sorted = KNOWN_PROVIDERS.to_vec();
+        sorted.sort_unstable();
+        let before = sorted.len();
+        sorted.dedup();
+        assert_eq!(before, sorted.len(), "a provider is listed twice");
     }
 }

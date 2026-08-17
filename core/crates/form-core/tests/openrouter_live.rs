@@ -251,13 +251,14 @@ async fn aborting_a_live_run_reports_aborted() {
         fn emit(&self, kind: EventKind) {
             match &kind {
                 // Stop as soon as the model is genuinely producing output.
-                EventKind::MessageUpdate { event, .. } => {
-                    if let AssistantMessageEvent::TextDelta { delta, .. } = event {
-                        let mut text = self.text.lock().unwrap();
-                        text.push_str(delta);
-                        if text.len() > 20 {
-                            self.abort.abort();
-                        }
+                EventKind::MessageUpdate {
+                    event: AssistantMessageEvent::TextDelta { delta, .. },
+                    ..
+                } => {
+                    let mut text = self.text.lock().unwrap();
+                    text.push_str(delta);
+                    if text.len() > 20 {
+                        self.abort.abort();
                     }
                 }
                 EventKind::RunEnd { outcome, .. } => {
@@ -403,7 +404,7 @@ async fn dump_event_shape() {
                     .unwrap_or_default();
                 let mut lines = self.lines.lock().unwrap();
                 let line = format!("{name} idx={index:?} partial={shape:?}");
-                if lines.last().map(|l| l != &line).unwrap_or(true) {
+                if lines.last() != Some(&line) {
                     lines.push(line);
                 }
             }
