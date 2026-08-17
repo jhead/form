@@ -1,0 +1,45 @@
+{
+  "error": {
+    "api": "anthropic-messages",
+    "content": [
+      {
+        "text": "Partial answer before the failure.",
+        "type": "text"
+      }
+    ],
+    "diagnostics": [
+      {
+        "code": "cache_miss",
+        "detail": {
+          "prefixTokens": 8192
+        },
+        "message": "prompt cache was cold for this turn",
+        "timestamp": 1755112232244
+      }
+    ],
+    "errorMessage": "upstream returned 529 overloaded",
+    "model": "claude-sonnet-4-5",
+    "provider": "anthropic",
+    "responseId": "msg_01Hx9QpR2tVw",
+    "stopReason": "error",
+    "timestamp": 1755112233444,
+    "usage": {
+      "cacheRead": 8192,
+      "cacheWrite": 1024,
+      "cacheWrite1h": 512,
+      "cost": {
+        "cacheRead": 0.00246,
+        "cacheWrite": 0.00384,
+        "input": 0.03744,
+        "output": 0.03465,
+        "total": 0.07839
+      },
+      "input": 12480,
+      "output": 2310,
+      "reasoning": 880,
+      "totalTokens": 24506
+    }
+  },
+  "reason": "error",
+  "type": "error"
+}

@@ -1,0 +1,10 @@
+{
+  "code": "attachment_rejected",
+  "detail": {
+    "attachmentId": "att_88c1e0f39d7b4a25",
+    "limitBytes": 262144
+  },
+  "message": "dashboard.png is 284913 bytes, over the 262144 byte limit",
+  "timestamp": 1755112233444,
+  "type": "error"
+}

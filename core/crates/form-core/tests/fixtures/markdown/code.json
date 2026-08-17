@@ -1,0 +1,523 @@
+{
+  "blocks": [
+    {
+      "id": "b0-d6ad602f7aaf",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "Language resolution, aliases and caps."
+        }
+      ]
+    },
+    {
+      "id": "b1-e6480669a7ff",
+      "partial": false,
+      "type": "codeBlock",
+      "language": "rust",
+      "code": "fn main() {\n    let greeting: &str = \"hello\";\n    println!(\"{greeting}\");\n}\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 2,
+          "scope": "storage.type.function.rust"
+        },
+        {
+          "start": 3,
+          "len": 4,
+          "scope": "entity.name.function.rust"
+        },
+        {
+          "start": 7,
+          "len": 1,
+          "scope": "punctuation.section.parameters.begin.rust"
+        },
+        {
+          "start": 8,
+          "len": 1,
+          "scope": "punctuation.section.parameters.end.rust"
+        },
+        {
+          "start": 10,
+          "len": 1,
+          "scope": "punctuation.section.block.begin.rust"
+        },
+        {
+          "start": 16,
+          "len": 3,
+          "scope": "storage.type.rust"
+        },
+        {
+          "start": 20,
+          "len": 8,
+          "scope": "meta.block.rust"
+        },
+        {
+          "start": 28,
+          "len": 1,
+          "scope": "punctuation.separator.rust"
+        },
+        {
+          "start": 30,
+          "len": 1,
+          "scope": "keyword.operator.rust"
+        },
+        {
+          "start": 31,
+          "len": 3,
+          "scope": "storage.type.rust"
+        },
+        {
+          "start": 35,
+          "len": 1,
+          "scope": "keyword.operator.rust"
+        },
+        {
+          "start": 37,
+          "len": 1,
+          "scope": "punctuation.definition.string.begin.rust"
+        },
+        {
+          "start": 38,
+          "len": 5,
+          "scope": "string.quoted.double.rust"
+        },
+        {
+          "start": 43,
+          "len": 1,
+          "scope": "punctuation.definition.string.end.rust"
+        },
+        {
+          "start": 44,
+          "len": 1,
+          "scope": "punctuation.terminator.rust"
+        },
+        {
+          "start": 50,
+          "len": 8,
+          "scope": "support.macro.rust"
+        },
+        {
+          "start": 58,
+          "len": 1,
+          "scope": "punctuation.section.group.begin.rust"
+        },
+        {
+          "start": 59,
+          "len": 1,
+          "scope": "punctuation.definition.string.begin.rust"
+        },
+        {
+          "start": 60,
+          "len": 10,
+          "scope": "constant.other.placeholder.rust"
+        },
+        {
+          "start": 70,
+          "len": 1,
+          "scope": "punctuation.definition.string.end.rust"
+        },
+        {
+          "start": 71,
+          "len": 1,
+          "scope": "punctuation.section.group.end.rust"
+        },
+        {
+          "start": 72,
+          "len": 1,
+          "scope": "punctuation.terminator.rust"
+        },
+        {
+          "start": 74,
+          "len": 1,
+          "scope": "punctuation.section.block.end.rust"
+        }
+      ]
+    },
+    {
+      "id": "b2-35300a49afb1",
+      "partial": false,
+      "type": "codeBlock",
+      "language": "ts",
+      "code": "export const add = (a: number, b: number): number => a + b;\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 6,
+          "scope": "keyword.control.import-export.js"
+        },
+        {
+          "start": 7,
+          "len": 5,
+          "scope": "storage.type.js"
+        },
+        {
+          "start": 13,
+          "len": 3,
+          "scope": "variable.other.readwrite.js"
+        },
+        {
+          "start": 17,
+          "len": 1,
+          "scope": "keyword.operator.assignment.js"
+        },
+        {
+          "start": 19,
+          "len": 1,
+          "scope": "punctuation.section.group.js"
+        },
+        {
+          "start": 20,
+          "len": 1,
+          "scope": "variable.other.readwrite.js"
+        },
+        {
+          "start": 21,
+          "len": 1,
+          "scope": "meta.group.js"
+        },
+        {
+          "start": 23,
+          "len": 6,
+          "scope": "variable.other.readwrite.js"
+        },
+        {
+          "start": 29,
+          "len": 1,
+          "scope": "punctuation.separator.comma.js"
+        },
+        {
+          "start": 31,
+          "len": 1,
+          "scope": "variable.other.readwrite.js"
+        },
+        {
+          "start": 32,
+          "len": 1,
+          "scope": "meta.group.js"
+        },
+        {
+          "start": 34,
+          "len": 6,
+          "scope": "variable.other.readwrite.js"
+        },
+        {
+          "start": 40,
+          "len": 1,
+          "scope": "punctuation.section.group.js"
+        },
+        {
+          "start": 43,
+          "len": 6,
+          "scope": "variable.parameter.function.js"
+        },
+        {
+          "start": 50,
+          "len": 2,
+          "scope": "storage.type.function.arrow.js"
+        },
+        {
+          "start": 53,
+          "len": 1,
+          "scope": "variable.other.readwrite.js"
+        },
+        {
+          "start": 55,
+          "len": 1,
+          "scope": "keyword.operator.arithmetic.js"
+        },
+        {
+          "start": 57,
+          "len": 1,
+          "scope": "variable.other.readwrite.js"
+        },
+        {
+          "start": 58,
+          "len": 1,
+          "scope": "punctuation.terminator.statement.js"
+        }
+      ]
+    },
+    {
+      "id": "b3-7fb351f9af2a",
+      "partial": false,
+      "type": "codeBlock",
+      "language": "sh",
+      "code": "set -euo pipefail\necho \"$HOME\" | tr a-z A-Z\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 3,
+          "scope": "support.function.set.shell"
+        },
+        {
+          "start": 4,
+          "len": 13,
+          "scope": "meta.function-call.arguments.shell"
+        },
+        {
+          "start": 18,
+          "len": 4,
+          "scope": "support.function.echo.shell"
+        },
+        {
+          "start": 23,
+          "len": 1,
+          "scope": "punctuation.definition.string.begin.shell"
+        },
+        {
+          "start": 24,
+          "len": 1,
+          "scope": "punctuation.definition.variable.shell"
+        },
+        {
+          "start": 25,
+          "len": 4,
+          "scope": "variable.other.readwrite.shell"
+        },
+        {
+          "start": 29,
+          "len": 1,
+          "scope": "punctuation.definition.string.end.shell"
+        },
+        {
+          "start": 31,
+          "len": 1,
+          "scope": "keyword.operator.logical.pipe.shell"
+        },
+        {
+          "start": 33,
+          "len": 2,
+          "scope": "variable.function.shell"
+        },
+        {
+          "start": 36,
+          "len": 7,
+          "scope": "meta.function-call.arguments.shell"
+        }
+      ]
+    },
+    {
+      "id": "b4-24f0aeeb4c03",
+      "partial": false,
+      "type": "codeBlock",
+      "language": "yml",
+      "code": "name: build\non: [push]\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 4,
+          "scope": "entity.name.tag.yaml"
+        },
+        {
+          "start": 4,
+          "len": 1,
+          "scope": "punctuation.separator.key-value.mapping.yaml"
+        },
+        {
+          "start": 6,
+          "len": 5,
+          "scope": "string.unquoted.plain.out.yaml"
+        },
+        {
+          "start": 12,
+          "len": 2,
+          "scope": "constant.language.boolean.yaml"
+        },
+        {
+          "start": 14,
+          "len": 1,
+          "scope": "punctuation.separator.key-value.mapping.yaml"
+        },
+        {
+          "start": 16,
+          "len": 1,
+          "scope": "punctuation.definition.sequence.begin.yaml"
+        },
+        {
+          "start": 17,
+          "len": 4,
+          "scope": "string.unquoted.plain.in.yaml"
+        },
+        {
+          "start": 21,
+          "len": 1,
+          "scope": "punctuation.definition.sequence.end.yaml"
+        }
+      ]
+    },
+    {
+      "id": "b5-6c2c7020de3a",
+      "partial": false,
+      "type": "codeBlock",
+      "language": "c++",
+      "code": "template <typename T> T max(T a, T b) { return a > b ? a : b; }\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 8,
+          "scope": "storage.type.template.c++"
+        },
+        {
+          "start": 9,
+          "len": 1,
+          "scope": "punctuation.section.generic.begin.c++"
+        },
+        {
+          "start": 10,
+          "len": 8,
+          "scope": "storage.type.c++"
+        },
+        {
+          "start": 19,
+          "len": 1,
+          "scope": "meta.template.c++"
+        },
+        {
+          "start": 20,
+          "len": 1,
+          "scope": "punctuation.section.generic.end.c++"
+        },
+        {
+          "start": 24,
+          "len": 3,
+          "scope": "entity.name.function.c++"
+        },
+        {
+          "start": 27,
+          "len": 1,
+          "scope": "punctuation.section.group.begin.c++"
+        },
+        {
+          "start": 28,
+          "len": 1,
+          "scope": "meta.group.c++"
+        },
+        {
+          "start": 30,
+          "len": 1,
+          "scope": "variable.parameter.c++"
+        },
+        {
+          "start": 31,
+          "len": 1,
+          "scope": "punctuation.separator.c++"
+        },
+        {
+          "start": 33,
+          "len": 1,
+          "scope": "meta.group.c++"
+        },
+        {
+          "start": 35,
+          "len": 1,
+          "scope": "variable.parameter.c++"
+        },
+        {
+          "start": 36,
+          "len": 1,
+          "scope": "punctuation.section.group.end.c++"
+        },
+        {
+          "start": 38,
+          "len": 1,
+          "scope": "punctuation.section.block.begin.c++"
+        },
+        {
+          "start": 40,
+          "len": 6,
+          "scope": "keyword.control.c++"
+        },
+        {
+          "start": 47,
+          "len": 1,
+          "scope": "meta.block.c++"
+        },
+        {
+          "start": 49,
+          "len": 1,
+          "scope": "keyword.operator.comparison.c"
+        },
+        {
+          "start": 51,
+          "len": 1,
+          "scope": "meta.block.c++"
+        },
+        {
+          "start": 53,
+          "len": 1,
+          "scope": "keyword.operator.ternary.c"
+        },
+        {
+          "start": 55,
+          "len": 1,
+          "scope": "meta.block.c++"
+        },
+        {
+          "start": 57,
+          "len": 1,
+          "scope": "keyword.operator.ternary.c"
+        },
+        {
+          "start": 59,
+          "len": 1,
+          "scope": "meta.block.c++"
+        },
+        {
+          "start": 60,
+          "len": 1,
+          "scope": "punctuation.terminator.c++"
+        },
+        {
+          "start": 62,
+          "len": 1,
+          "scope": "punctuation.section.block.end.c++"
+        }
+      ]
+    },
+    {
+      "id": "b6-015c07adb3cd",
+      "partial": false,
+      "type": "codeBlock",
+      "language": "wingdings",
+      "code": "this language does not exist\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 29,
+          "scope": "plain"
+        }
+      ]
+    },
+    {
+      "id": "b7-45896eacc43a",
+      "partial": false,
+      "type": "codeBlock",
+      "language": "diff",
+      "code": "--- a/x\n+++ b/x\n-removed\n+added\n kept\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 7,
+          "scope": "markup.deleted"
+        },
+        {
+          "start": 8,
+          "len": 7,
+          "scope": "markup.inserted"
+        },
+        {
+          "start": 16,
+          "len": 8,
+          "scope": "markup.deleted"
+        },
+        {
+          "start": 25,
+          "len": 6,
+          "scope": "markup.inserted"
+        }
+      ]
+    }
+  ]
+}

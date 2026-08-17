@@ -1,0 +1,22 @@
+{
+  "session": {
+    "archived": true,
+    "createdAt": 1755025833444,
+    "id": "ses_1b77d0e5a4c34f92",
+    "index": 0,
+    "messageCount": 18,
+    "modelRef": {
+      "modelId": "claude-sonnet-4-5",
+      "providerId": "anthropic",
+      "thinkingLevel": "high"
+    },
+    "pinned": false,
+    "status": "idle",
+    "title": "Untitled",
+    "titleIsCustom": false,
+    "totalTokens": 148320,
+    "updatedAt": 1755112233444
+  },
+  "timestamp": 1755112233444,
+  "type": "session_updated"
+}

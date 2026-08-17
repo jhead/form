@@ -1,0 +1,39 @@
+{
+  "blocks": [
+    {
+      "id": "b0-b52899298fcb",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "Comparing the two options."
+        }
+      ]
+    },
+    {
+      "id": "b1-aa1e34937ff4",
+      "partial": true,
+      "type": "table",
+      "align": [
+        "none",
+        "none"
+      ],
+      "header": [
+        [
+          {
+            "type": "text",
+            "text": "Option"
+          }
+        ],
+        [
+          {
+            "type": "text",
+            "text": "Cost"
+          }
+        ]
+      ],
+      "rows": []
+    }
+  ]
+}

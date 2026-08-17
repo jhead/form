@@ -1,0 +1,24 @@
+{
+  "id": "ent_7c02af9915d44b71",
+  "message": {
+    "content": [
+      {
+        "text": "268 lines read from src/server/health.rs",
+        "type": "text"
+      }
+    ],
+    "details": {
+      "linesRead": 268,
+      "truncated": false
+    },
+    "role": "toolResult",
+    "timestamp": 1755112234344,
+    "toolCallId": "toolu_0af31d6c",
+    "toolName": "read"
+  },
+  "parentId": "ent_0c19b4e77f2d4a15",
+  "seq": 8,
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "timestamp": 1755112233444,
+  "type": "message"
+}

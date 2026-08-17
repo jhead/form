@@ -1,0 +1,10 @@
+{
+  "id": "ent_a41d5e8827bc4903",
+  "modelId": "gpt-5",
+  "parentId": "ent_0c19b4e77f2d4a15",
+  "provider": "openai",
+  "seq": 9,
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "timestamp": 1755112233444,
+  "type": "model_change"
+}

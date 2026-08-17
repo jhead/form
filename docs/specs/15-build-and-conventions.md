@@ -40,19 +40,27 @@ workstream owns — including `Package.swift`, `core/Cargo.toml`, `protocol.rs`,
 ## 2. Build
 
 ```bash
-make            # rust (release) + swift build + assemble app/build/form.app
-make debug      # debug variants
+make            # rust + swift build + assemble app/build/form.app
+make release    # release variants
 make test       # cargo test + swift test + protocol fixtures
 make lint       # cargo fmt --check, clippy -D warnings
-make headers    # regenerate core/include/form.h
 make run        # build + open form.app
+make cli        # stream a stub run to the terminal, no Swift involved
+make xcode      # generate form.xcodeproj and open it
+make check-symbols  # assert the 9 C symbols the header promises are exported
 ```
 
-The Rust core builds as a universal static library (`aarch64-apple-darwin` +
-`x86_64-apple-darwin`, `lipo`'d) for release; debug builds host-arch only for speed.
+`scripts/build-core.sh` is the single place the Rust library gets built — `make` and the
+Xcode pre-build phase both call it, so the two paths cannot drift. Release is universal
+(`aarch64` + `x86_64`, `lipo`'d), falling back to host-only when the second target is not
+installed; debug is host-arch for speed.
 
-No `.xcodeproj` is committed. `xcodegen` can produce one on demand for debugging in Xcode;
-SwiftPM is the source of truth.
+**No `.xcodeproj` is committed.** It is generated from `project.yml`, so it cannot conflict
+and cannot drift from the package. The Xcode app target compiles `app/Sources/form` and links
+the package's library products — one copy of every source file, no duplication. Both build
+paths share `app/Resources/Info.plist`, which must contain **literal values only**: the
+command-line bundler copies it verbatim and has no Xcode to expand `$(BUILD_SETTING)`
+references.
 
 ## 3. Conventions
 

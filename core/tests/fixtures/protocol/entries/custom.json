@@ -1,0 +1,13 @@
+{
+  "customType": "workspaceRootChanged",
+  "data": {
+    "from": "/Users/x/dev/api",
+    "to": "/Users/x/dev/api/server"
+  },
+  "id": "ent_e38c1b7700dd4a44",
+  "parentId": "ent_0c19b4e77f2d4a15",
+  "seq": 13,
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "timestamp": 1755112233444,
+  "type": "custom"
+}

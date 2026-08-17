@@ -1,0 +1,197 @@
+{
+  "blocks": [
+    {
+      "id": "b0-8caff361b1ea",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "Links the app can act on and links it cannot."
+        }
+      ]
+    },
+    {
+      "id": "b1-4ce78557aafd",
+      "partial": false,
+      "type": "list",
+      "ordered": false,
+      "start": 1,
+      "tight": true,
+      "items": [
+        {
+          "blocks": [
+            {
+              "id": "b0-b6334c99b274",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "link",
+                  "url": "https://example.com/ok",
+                  "spans": [
+                    {
+                      "type": "text",
+                      "text": "https"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "id": "b0-e08bf9981385",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "link",
+                  "url": "http://example.com/ok",
+                  "spans": [
+                    {
+                      "type": "text",
+                      "text": "http"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "id": "b0-671a28bce87d",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "link",
+                  "url": "mailto:someone@example.com",
+                  "spans": [
+                    {
+                      "type": "text",
+                      "text": "mail"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "id": "b0-3f8f0a779d61",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "link",
+                  "url": "file:///Users/x/notes.txt",
+                  "spans": [
+                    {
+                      "type": "text",
+                      "text": "file"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "id": "b0-ce343f4cb759",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "script"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "id": "b0-b77aa8c044ec",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "mixed case"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "id": "b0-524ba5538646",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "data"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "id": "b0-8c493c2ca419",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "relative"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b2-ceb0daa8766f",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "blocked"
+        }
+      ]
+    },
+    {
+      "id": "b3-360288b9cfde",
+      "partial": false,
+      "type": "html",
+      "raw": "<div onclick=\"steal()\"><script>evil()</script></div>\n"
+    },
+    {
+      "id": "b4-ae71e03d7b16",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "An inline <img src=x onerror=alert(1)> tag."
+        }
+      ]
+    }
+  ]
+}

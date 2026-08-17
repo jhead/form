@@ -1,0 +1,4 @@
+# Build into core/target/, which is already gitignored — this crate is outside the workspace,
+# so its default target directory would land beside the source and show up as untracked.
+[build]
+target-dir = "../../../../target/headergen"

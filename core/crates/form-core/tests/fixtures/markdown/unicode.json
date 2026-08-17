@@ -1,0 +1,122 @@
+{
+  "blocks": [
+    {
+      "id": "b0-c969d8ae763a",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "Ranges are UTF-16 code units, not bytes."
+        }
+      ]
+    },
+    {
+      "id": "b1-70777380eee4",
+      "partial": false,
+      "type": "codeBlock",
+      "language": "rust",
+      "code": "let party = \"🎉 日本語 café\";\nlet plain = \"ascii\";\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 3,
+          "scope": "storage.type.rust"
+        },
+        {
+          "start": 10,
+          "len": 1,
+          "scope": "keyword.operator.rust"
+        },
+        {
+          "start": 12,
+          "len": 1,
+          "scope": "punctuation.definition.string.begin.rust"
+        },
+        {
+          "start": 13,
+          "len": 11,
+          "scope": "string.quoted.double.rust"
+        },
+        {
+          "start": 24,
+          "len": 1,
+          "scope": "punctuation.definition.string.end.rust"
+        },
+        {
+          "start": 25,
+          "len": 1,
+          "scope": "punctuation.terminator.rust"
+        },
+        {
+          "start": 27,
+          "len": 3,
+          "scope": "storage.type.rust"
+        },
+        {
+          "start": 37,
+          "len": 1,
+          "scope": "keyword.operator.rust"
+        },
+        {
+          "start": 39,
+          "len": 1,
+          "scope": "punctuation.definition.string.begin.rust"
+        },
+        {
+          "start": 40,
+          "len": 5,
+          "scope": "string.quoted.double.rust"
+        },
+        {
+          "start": 45,
+          "len": 1,
+          "scope": "punctuation.definition.string.end.rust"
+        },
+        {
+          "start": 46,
+          "len": 1,
+          "scope": "punctuation.terminator.rust"
+        }
+      ]
+    },
+    {
+      "id": "b2-545983939322",
+      "partial": false,
+      "type": "codeBlock",
+      "code": "🎉 日本語 café with no language\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 29,
+          "scope": "plain"
+        }
+      ]
+    },
+    {
+      "id": "b3-5413f7f2c310",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "Prose with 日本語, an emoji 🎉, and a "
+        },
+        {
+          "type": "link",
+          "url": "https://example.com/日本語",
+          "spans": [
+            {
+              "type": "text",
+              "text": "link"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "contentIndex": 2,
+  "partial": {
+    "api": "anthropic-messages",
+    "content": [
+      {
+        "text": "I'll add the heal",
+        "type": "text"
+      }
+    ],
+    "model": "claude-sonnet-4-5",
+    "provider": "anthropic",
+    "responseId": "msg_01Hx9QpR2tVw",
+    "stopReason": "pending",
+    "timestamp": 1755112233444,
+    "usage": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "cost": {
+        "cacheRead": 0.0,
+        "cacheWrite": 0.0,
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "input": 0,
+      "output": 0,
+      "totalTokens": 0
+    }
+  },
+  "toolCall": {
+    "arguments": {
+      "path": "src/server/health.rs",
+      "startLine": 42
+    },
+    "id": "toolu_0af31d6c",
+    "name": "read",
+    "namespace": "fs",
+    "thoughtSignature": "sig_9d31c0"
+  },
+  "type": "toolcall_end"
+}

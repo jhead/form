@@ -1,0 +1,21 @@
+# Deliberately its own workspace. `cbindgen` is a build-time tool, not a dependency of the
+# shipped library, and the form workspace manifest is frozen (docs/specs/15 §1) — keeping the
+# generator here means the header can be regenerated without touching core/Cargo.toml or
+# core/crates/form-ffi/Cargo.toml, and without dragging cbindgen into every core build.
+[workspace]
+
+[package]
+name = "form-headergen"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+description = "Generates core/include/form.h from form-ffi with cbindgen."
+
+[[bin]]
+name = "form-headergen"
+path = "src/main.rs"
+
+[dependencies]
+cbindgen = { version = "0.29", default-features = false }

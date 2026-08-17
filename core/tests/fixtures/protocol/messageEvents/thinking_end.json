@@ -1,0 +1,33 @@
+{
+  "content": "The router is registered in main.rs.",
+  "contentIndex": 1,
+  "partial": {
+    "api": "anthropic-messages",
+    "content": [
+      {
+        "text": "I'll add the heal",
+        "type": "text"
+      }
+    ],
+    "model": "claude-sonnet-4-5",
+    "provider": "anthropic",
+    "responseId": "msg_01Hx9QpR2tVw",
+    "stopReason": "pending",
+    "timestamp": 1755112233444,
+    "usage": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "cost": {
+        "cacheRead": 0.0,
+        "cacheWrite": 0.0,
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "input": 0,
+      "output": 0,
+      "totalTokens": 0
+    }
+  },
+  "type": "thinking_end"
+}

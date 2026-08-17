@@ -1,0 +1,10 @@
+{
+  "fromId": "ent_0c19b4e77f2d4a15",
+  "id": "ent_d27b0a6699cc4e35",
+  "parentId": "ent_0c19b4e77f2d4a15",
+  "seq": 12,
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "summary": "Branched to try the middleware approach instead.",
+  "timestamp": 1755112233444,
+  "type": "branch_summary"
+}

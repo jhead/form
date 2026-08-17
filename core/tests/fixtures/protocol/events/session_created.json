@@ -1,0 +1,25 @@
+{
+  "commandId": "cmd_7be31a90c5d24e88",
+  "session": {
+    "archived": false,
+    "createdAt": 1755025833444,
+    "groupId": "grp_41ab77c2e8ff4b03",
+    "id": "ses_9f2c14aa7b0e4d1e",
+    "index": 3,
+    "messageCount": 18,
+    "modelRef": {
+      "modelId": "claude-sonnet-4-5",
+      "providerId": "anthropic",
+      "thinkingLevel": "high"
+    },
+    "pinned": true,
+    "status": "streaming",
+    "title": "Health check endpoint",
+    "titleIsCustom": true,
+    "totalTokens": 148320,
+    "updatedAt": 1755112233444,
+    "workspaceRoot": "/Users/x/dev/api"
+  },
+  "timestamp": 1755112233444,
+  "type": "session_created"
+}

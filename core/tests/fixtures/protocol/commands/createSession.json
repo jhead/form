@@ -1,0 +1,11 @@
+{
+  "groupId": "grp_41ab77c2e8ff4b03",
+  "modelRef": {
+    "modelId": "claude-sonnet-4-5",
+    "providerId": "anthropic",
+    "thinkingLevel": "high"
+  },
+  "title": "Health check endpoint",
+  "type": "createSession",
+  "workspaceRoot": "/Users/x/dev/api"
+}

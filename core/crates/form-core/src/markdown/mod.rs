@@ -4,10 +4,28 @@
 //!
 //! Parsing lives in Rust so three future platforms share one implementation. **Colors never
 //! appear here** — only `syntect` scope names, which `FormDesign` maps onto the active
-//! theme. What is here now is the type shape plus a paragraph/code-fence parse good enough
-//! to render something real; W5 replaces `parse` with the full `pulldown-cmark` pass.
+//! theme.
+//!
+//! Two entry points: [`parse`] for a finished document and [`parse_streaming`] for one that
+//! may end mid-construct. The streaming path repairs the trailing partial construct
+//! ([`stream`]) so an unterminated fence, a half-written table or a dangling `**` renders as
+//! what it is about to become instead of flickering through its raw source (F7.3).
+//!
+//! Block ids are `(index, content hash)`. The hash covers the block's serialized content, so
+//! an id changes exactly when the block's rendering would — which is what lets SwiftUI's
+//! `ForEach` keep identity for everything but the tail of a growing document.
+
+use std::fmt::Write as _;
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+
+mod highlight;
+mod parse;
+mod stream;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -38,6 +56,7 @@ pub enum Span {
     },
     Link {
         url: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         title: Option<String>,
         spans: Vec<Span>,
     },
@@ -57,9 +76,9 @@ pub struct ListItem {
     pub blocks: Vec<MarkdownBlock>,
 }
 
-/// Byte offsets are **UTF-16 code units** so Swift can apply them to an `AttributedString`
-/// without re-encoding. Tested with emoji and CJK.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// Offsets are **UTF-16 code units**, not bytes, so Swift can apply them straight to an
+/// `AttributedString` without re-encoding the code first. Tested with emoji and CJK.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodeToken {
     pub start: u32,
@@ -87,7 +106,6 @@ pub enum BlockKind {
         language: Option<String>,
         code: String,
         tokens: Vec<CodeToken>,
-        partial: bool,
     },
     List {
         ordered: bool,
@@ -107,6 +125,7 @@ pub enum BlockKind {
     Image {
         url: String,
         alt: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         title: Option<String>,
     },
     /// Captured, never interpreted — rendered as escaped text.
@@ -124,6 +143,15 @@ pub enum BlockKind {
 pub struct MarkdownBlock {
     /// Stable across incremental re-parses so SwiftUI keeps view identity while streaming.
     pub id: String,
+    /// Set on the trailing block of an incomplete document: the renderer suppresses its
+    /// chrome (a copy button on a code block still being written, a table's footer rule)
+    /// until the text stops moving.
+    ///
+    /// Spec 05 §2 hangs this off `CodeBlock`; it lives on the block instead because a
+    /// paragraph mid-sentence needs the same treatment, and because `#[serde(flatten)]`
+    /// cannot carry the same key at both levels. A code block's JSON is unchanged.
+    #[serde(default)]
+    pub partial: bool,
     #[serde(flatten)]
     pub kind: BlockKind,
 }
@@ -134,99 +162,43 @@ pub struct MarkdownDoc {
     pub blocks: Vec<MarkdownBlock>,
 }
 
+/// Parse a finished document.
 pub fn parse(text: &str) -> MarkdownDoc {
     parse_streaming(text, true)
 }
 
-/// TODO(W5): replace with the full `pulldown-cmark` + `syntect` implementation from spec 05.
-/// This placeholder handles only paragraphs and fenced code so the renderer has real input.
+/// Parse a document that may end mid-construct.
+///
+/// With `complete: false` the trailing construct is repaired before parsing and the last
+/// block is marked [`MarkdownBlock::partial`].
 pub fn parse_streaming(text: &str, complete: bool) -> MarkdownDoc {
-    let mut blocks = Vec::new();
-    let mut in_fence = false;
-    let mut fence_lang: Option<String> = None;
-    let mut buffer: Vec<&str> = Vec::new();
-
-    let flush_paragraph = |buffer: &mut Vec<&str>, blocks: &mut Vec<MarkdownBlock>| {
-        let joined = buffer.join("\n");
-        buffer.clear();
-        if joined.trim().is_empty() {
-            return;
-        }
-        blocks.push(block(
-            blocks.len(),
-            &joined,
-            BlockKind::Paragraph {
-                spans: vec![Span::Text {
-                    text: joined.clone(),
-                }],
-            },
-        ));
-    };
-
-    for line in text.lines() {
-        if let Some(rest) = line.trim_start().strip_prefix("```") {
-            if in_fence {
-                let code = buffer.join("\n");
-                buffer.clear();
-                let id = block_id(blocks.len(), &code);
-                blocks.push(MarkdownBlock {
-                    id,
-                    kind: BlockKind::CodeBlock {
-                        language: fence_lang.take(),
-                        code,
-                        tokens: Vec::new(),
-                        partial: false,
-                    },
-                });
-                in_fence = false;
-            } else {
-                flush_paragraph(&mut buffer, &mut blocks);
-                fence_lang = (!rest.trim().is_empty()).then(|| rest.trim().to_string());
-                in_fence = true;
-            }
-            continue;
-        }
-        if in_fence {
-            buffer.push(line);
-        } else if line.trim().is_empty() {
-            flush_paragraph(&mut buffer, &mut blocks);
-        } else {
-            buffer.push(line);
-        }
-    }
-
-    // An unterminated fence still renders as a code block (F7.3).
-    if in_fence {
-        let code = buffer.join("\n");
-        let id = block_id(blocks.len(), &code);
-        blocks.push(MarkdownBlock {
-            id,
-            kind: BlockKind::CodeBlock {
-                language: fence_lang,
-                code,
-                tokens: Vec::new(),
-                partial: !complete,
-            },
-        });
-    } else {
-        flush_paragraph(&mut buffer, &mut blocks);
-    }
-
-    MarkdownDoc { blocks }
+    parse::parse_doc(text, complete)
 }
 
-fn block(index: usize, content: &str, kind: BlockKind) -> MarkdownBlock {
+/// Identity is `(index, content hash)` — stable while a block's content is unchanged, so a
+/// growing document only invalidates its tail. The hash is over the serialized block, which
+/// is exactly the input the renderer sees; `partial` is folded in so the trailing block
+/// re-renders when it stops being partial and grows its chrome.
+fn block_id(index: usize, kind: &BlockKind, partial: bool) -> String {
+    use std::io::Write as _;
+
+    let mut hasher = Sha256::new();
+    // Infallible: `Sha256`'s `io::Write` never errors and `BlockKind` always serializes.
+    let _ = serde_json::to_writer(&mut hasher, kind);
+    let _ = hasher.write_all(&[u8::from(partial)]);
+    let digest = hasher.finalize();
+
+    let mut id = format!("b{index}-");
+    for byte in &digest[..6] {
+        let _ = write!(id, "{byte:02x}");
+    }
+    id
+}
+
+fn block(index: usize, kind: BlockKind) -> MarkdownBlock {
     MarkdownBlock {
-        id: block_id(index, content),
+        id: block_id(index, &kind, false),
+        partial: false,
         kind,
     }
-}
-
-/// Identity is `(index, content hash)` — stable while a block's text is unchanged, so a
-/// growing document only invalidates its tail.
-fn block_id(index: usize, content: &str) -> String {
-    use std::hash::{Hash, Hasher};
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    content.hash(&mut hasher);
-    format!("b{index}-{:x}", hasher.finish())
 }

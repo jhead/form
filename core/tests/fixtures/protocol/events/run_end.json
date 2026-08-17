@@ -1,0 +1,25 @@
+{
+  "commandId": "cmd_7be31a90c5d24e88",
+  "durationMs": 8412,
+  "outcome": "completed",
+  "runId": "run_5c8e21d4b9f04a37",
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "timestamp": 1755112233444,
+  "type": "run_end",
+  "usage": {
+    "cacheRead": 8192,
+    "cacheWrite": 1024,
+    "cacheWrite1h": 512,
+    "cost": {
+      "cacheRead": 0.00246,
+      "cacheWrite": 0.00384,
+      "input": 0.03744,
+      "output": 0.03465,
+      "total": 0.07839
+    },
+    "input": 12480,
+    "output": 2310,
+    "reasoning": 880,
+    "totalTokens": 24506
+  }
+}

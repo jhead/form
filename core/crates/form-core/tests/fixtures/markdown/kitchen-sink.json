@@ -1,0 +1,607 @@
+{
+  "blocks": [
+    {
+      "id": "b0-5ec2d8b5693f",
+      "partial": false,
+      "type": "heading",
+      "level": 1,
+      "spans": [
+        {
+          "type": "text",
+          "text": "Kitchen sink"
+        }
+      ],
+      "anchor": "kitchen-sink"
+    },
+    {
+      "id": "b1-89f26d6f968b",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "Plain paragraph with "
+        },
+        {
+          "type": "emphasis",
+          "spans": [
+            {
+              "type": "text",
+              "text": "emphasis"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "strong",
+          "spans": [
+            {
+              "type": "text",
+              "text": "strong"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "strike",
+          "spans": [
+            {
+              "type": "text",
+              "text": "strike"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "code",
+          "text": "inline code"
+        },
+        {
+          "type": "text",
+          "text": ","
+        },
+        {
+          "type": "break",
+          "hard": false
+        },
+        {
+          "type": "text",
+          "text": "a "
+        },
+        {
+          "type": "link",
+          "url": "https://example.com",
+          "title": "Title",
+          "spans": [
+            {
+              "type": "text",
+              "text": "link"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ", a bad link,"
+        },
+        {
+          "type": "break",
+          "hard": false
+        },
+        {
+          "type": "text",
+          "text": "a footnote"
+        },
+        {
+          "type": "footnoteRef",
+          "label": "note"
+        },
+        {
+          "type": "text",
+          "text": ", and a bare URL "
+        },
+        {
+          "type": "link",
+          "url": "https://example.com/a?b=1",
+          "spans": [
+            {
+              "type": "text",
+              "text": "https://example.com/a?b=1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " (see it)."
+        }
+      ]
+    },
+    {
+      "id": "b2-e5d4ccbe6982",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "A hard break lives at the end of this line,"
+        },
+        {
+          "type": "break",
+          "hard": true
+        },
+        {
+          "type": "text",
+          "text": "and the next line follows it."
+        }
+      ]
+    },
+    {
+      "id": "b3-731801d91ee1",
+      "partial": false,
+      "type": "heading",
+      "level": 2,
+      "spans": [
+        {
+          "type": "text",
+          "text": "Lists"
+        }
+      ],
+      "anchor": "lists"
+    },
+    {
+      "id": "b4-91ce1b3c7146",
+      "partial": false,
+      "type": "list",
+      "ordered": false,
+      "start": 1,
+      "tight": true,
+      "items": [
+        {
+          "blocks": [
+            {
+              "id": "b0-b88f71c6f897",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "tight one"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "id": "b0-1a3fab17c695",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "tight two"
+                }
+              ]
+            },
+            {
+              "id": "b1-8db9212aa7b0",
+              "partial": false,
+              "type": "list",
+              "ordered": false,
+              "start": 1,
+              "tight": true,
+              "items": [
+                {
+                  "blocks": [
+                    {
+                      "id": "b0-ce483fc4ed84",
+                      "partial": false,
+                      "type": "paragraph",
+                      "spans": [
+                        {
+                          "type": "text",
+                          "text": "nested"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b5-f292fba87736",
+      "partial": false,
+      "type": "list",
+      "ordered": true,
+      "start": 1,
+      "tight": true,
+      "items": [
+        {
+          "blocks": [
+            {
+              "id": "b0-9d3df601d4a1",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "first"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "id": "b0-0f73a8e32aa5",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "second"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b6-1854ffee0f53",
+      "partial": false,
+      "type": "list",
+      "ordered": false,
+      "start": 1,
+      "tight": true,
+      "items": [
+        {
+          "checked": false,
+          "blocks": [
+            {
+              "id": "b0-670819165d62",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "todo"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "checked": true,
+          "blocks": [
+            {
+              "id": "b0-7d9d47a50250",
+              "partial": false,
+              "type": "paragraph",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "done"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b7-31a0bd81047e",
+      "partial": false,
+      "type": "heading",
+      "level": 2,
+      "spans": [
+        {
+          "type": "text",
+          "text": "Quotes and code"
+        }
+      ],
+      "anchor": "quotes-and-code"
+    },
+    {
+      "id": "b8-145c6fa06607",
+      "partial": false,
+      "type": "quote",
+      "blocks": [
+        {
+          "id": "b0-cfcffe820879",
+          "partial": false,
+          "type": "paragraph",
+          "spans": [
+            {
+              "type": "text",
+              "text": "A quote with "
+            },
+            {
+              "type": "strong",
+              "spans": [
+                {
+                  "type": "text",
+                  "text": "bold"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "."
+            }
+          ]
+        },
+        {
+          "id": "b1-c55607379d28",
+          "partial": false,
+          "type": "codeBlock",
+          "language": "rust",
+          "code": "fn main() { println!(\"hi\"); }\n",
+          "tokens": [
+            {
+              "start": 0,
+              "len": 2,
+              "scope": "storage.type.function.rust"
+            },
+            {
+              "start": 3,
+              "len": 4,
+              "scope": "entity.name.function.rust"
+            },
+            {
+              "start": 7,
+              "len": 1,
+              "scope": "punctuation.section.parameters.begin.rust"
+            },
+            {
+              "start": 8,
+              "len": 1,
+              "scope": "punctuation.section.parameters.end.rust"
+            },
+            {
+              "start": 10,
+              "len": 1,
+              "scope": "punctuation.section.block.begin.rust"
+            },
+            {
+              "start": 12,
+              "len": 8,
+              "scope": "support.macro.rust"
+            },
+            {
+              "start": 20,
+              "len": 1,
+              "scope": "punctuation.section.group.begin.rust"
+            },
+            {
+              "start": 21,
+              "len": 1,
+              "scope": "punctuation.definition.string.begin.rust"
+            },
+            {
+              "start": 22,
+              "len": 2,
+              "scope": "string.quoted.double.rust"
+            },
+            {
+              "start": 24,
+              "len": 1,
+              "scope": "punctuation.definition.string.end.rust"
+            },
+            {
+              "start": 25,
+              "len": 1,
+              "scope": "punctuation.section.group.end.rust"
+            },
+            {
+              "start": 26,
+              "len": 1,
+              "scope": "punctuation.terminator.rust"
+            },
+            {
+              "start": 28,
+              "len": 1,
+              "scope": "punctuation.section.block.end.rust"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b9-56a72a2c6204",
+      "partial": false,
+      "type": "table",
+      "align": [
+        "left",
+        "center",
+        "right"
+      ],
+      "header": [
+        [
+          {
+            "type": "text",
+            "text": "Left"
+          }
+        ],
+        [
+          {
+            "type": "text",
+            "text": "Center"
+          }
+        ],
+        [
+          {
+            "type": "text",
+            "text": "Right"
+          }
+        ]
+      ],
+      "rows": [
+        [
+          [
+            {
+              "type": "text",
+              "text": "a"
+            }
+          ],
+          [
+            {
+              "type": "text",
+              "text": "b"
+            }
+          ],
+          [
+            {
+              "type": "text",
+              "text": "c"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "type": "text",
+              "text": "dd"
+            }
+          ],
+          [
+            {
+              "type": "text",
+              "text": "ee"
+            }
+          ],
+          [
+            {
+              "type": "text",
+              "text": "ff"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "b10-b6ccaca474bc",
+      "partial": false,
+      "type": "rule"
+    },
+    {
+      "id": "b11-e1290fb63844",
+      "partial": false,
+      "type": "image",
+      "url": "https://example.com/i.png",
+      "alt": "alt text",
+      "title": "pic"
+    },
+    {
+      "id": "b12-dcbc1bfd86ac",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "Text before "
+        }
+      ]
+    },
+    {
+      "id": "b13-7727c4e89fb4",
+      "partial": false,
+      "type": "image",
+      "url": "https://example.com/j.png",
+      "alt": "inline"
+    },
+    {
+      "id": "b14-8f19499f51e2",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": " text after."
+        }
+      ]
+    },
+    {
+      "id": "b15-37a633d17252",
+      "partial": false,
+      "type": "html",
+      "raw": "<div class=\"x\">raw &amp; html</div>\n"
+    },
+    {
+      "id": "b16-96883d2e97a0",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "Inline <b>html</b> too."
+        }
+      ]
+    },
+    {
+      "id": "b17-9a99a9e87159",
+      "partial": false,
+      "type": "codeBlock",
+      "code": "no language at all\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 19,
+          "scope": "plain"
+        }
+      ]
+    },
+    {
+      "id": "b18-3722f825a2cb",
+      "partial": false,
+      "type": "codeBlock",
+      "language": "diff",
+      "code": "- old line\n+ new line\n context\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 10,
+          "scope": "markup.deleted"
+        },
+        {
+          "start": 11,
+          "len": 10,
+          "scope": "markup.inserted"
+        }
+      ]
+    },
+    {
+      "id": "b19-242727e76732",
+      "partial": false,
+      "type": "footnoteDef",
+      "label": "note",
+      "blocks": [
+        {
+          "id": "b0-b822652f3f85",
+          "partial": false,
+          "type": "paragraph",
+          "spans": [
+            {
+              "type": "text",
+              "text": "The footnote body."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

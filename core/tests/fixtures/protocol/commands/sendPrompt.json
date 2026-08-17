@@ -1,0 +1,8 @@
+{
+  "attachmentIds": [
+    "att_88c1e0f39d7b4a25"
+  ],
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "text": "Add a /healthz endpoint and a test for it.",
+  "type": "sendPrompt"
+}

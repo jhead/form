@@ -1,0 +1,73 @@
+{
+  "commandId": "cmd_7be31a90c5d24e88",
+  "entry": {
+    "id": "ent_3d5f8821aa094c60",
+    "message": {
+      "api": "anthropic-messages",
+      "content": [
+        {
+          "text": "I'll add the health check endpoint.",
+          "textSignature": "sig_text_44a1",
+          "type": "text"
+        },
+        {
+          "redacted": true,
+          "thinking": "The router is registered in main.rs.",
+          "thinkingSignature": "sig_think_71b9",
+          "type": "thinking"
+        },
+        {
+          "arguments": {
+            "path": "src/server/health.rs",
+            "startLine": 42
+          },
+          "id": "toolu_0af31d6c",
+          "name": "read",
+          "namespace": "fs",
+          "thoughtSignature": "sig_9d31c0",
+          "type": "toolCall"
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "cache_miss",
+          "detail": {
+            "prefixTokens": 8192
+          },
+          "message": "prompt cache was cold for this turn",
+          "timestamp": 1755112232244
+        }
+      ],
+      "model": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "responseId": "msg_01Hx9QpR2tVw",
+      "role": "assistant",
+      "stopReason": "toolUse",
+      "timestamp": 1755112233444,
+      "usage": {
+        "cacheRead": 8192,
+        "cacheWrite": 1024,
+        "cacheWrite1h": 512,
+        "cost": {
+          "cacheRead": 0.00246,
+          "cacheWrite": 0.00384,
+          "input": 0.03744,
+          "output": 0.03465,
+          "total": 0.07839
+        },
+        "input": 12480,
+        "output": 2310,
+        "reasoning": 880,
+        "totalTokens": 24506
+      }
+    },
+    "parentId": "ent_0c19b4e77f2d4a15",
+    "seq": 7,
+    "sessionId": "ses_9f2c14aa7b0e4d1e",
+    "timestamp": 1755112233444,
+    "type": "message"
+  },
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "timestamp": 1755112233444,
+  "type": "message_end"
+}

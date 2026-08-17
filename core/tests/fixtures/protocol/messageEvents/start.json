@@ -1,0 +1,25 @@
+{
+  "partial": {
+    "api": "anthropic-messages",
+    "content": [],
+    "model": "claude-sonnet-4-5",
+    "provider": "anthropic",
+    "stopReason": "pending",
+    "timestamp": 1786933528767,
+    "usage": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "cost": {
+        "cacheRead": 0.0,
+        "cacheWrite": 0.0,
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "input": 0,
+      "output": 0,
+      "totalTokens": 0
+    }
+  },
+  "type": "start"
+}

@@ -18,7 +18,7 @@ CORE_LIB_DIR := $(abspath $(CORE_DIR)/target/$(PROFILE))
 LINK_FLAGS   := -Xlinker -L$(CORE_LIB_DIR)
 
 .PHONY: all debug release core app bundle run test test-rust test-swift lint fmt \
-        headers check-symbols cli clean xcode
+        headers check-symbols cli clean xcode verify-xcode
 
 all: bundle
 
@@ -29,9 +29,10 @@ release:
 	@$(MAKE) bundle PROFILE=release
 
 ## Rust static library. Release is universal so the bundle runs on Intel too.
+## Shared with the Xcode pre-build phase so the two paths cannot drift.
 core:
-	@echo "==> cargo build ($(PROFILE))"
-	@cd $(CORE_DIR) && cargo build $(CARGO_FLAGS)
+	@echo "==> building rust core ($(PROFILE))"
+	@bash scripts/build-core.sh $(PROFILE)
 
 app: core
 	@echo "==> swift build ($(PROFILE))"
@@ -77,10 +78,29 @@ check-symbols: core
 	done
 	@echo "    all 9 present"
 
-## Optional convenience only — SwiftPM is the source of truth, no .xcodeproj is committed.
-xcode:
-	@cd $(APP_DIR) && swift package generate-xcodeproj 2>/dev/null \
-		|| echo "open the package directly: xed $(APP_DIR)"
+## Build through Xcode exactly as pressing Run does, then assert the Rust core actually
+## made it into the product. Passes once the app constructs a CoreClient at startup (W9);
+## until then the app never references the core and the linker drops it.
+verify-xcode: form.xcodeproj
+	@xcodebuild -project form.xcodeproj -scheme form -configuration Debug build \
+		-quiet -derivedDataPath $(BUILD_DIR)/DerivedData
+	@find $(BUILD_DIR)/DerivedData/Build/Products/Debug -type f \
+		\( -name "form" -o -name "*.dylib" \) -exec strings {} \; 2>/dev/null \
+		| grep -q "already-freed core handle" \
+		&& echo "    rust core is linked into the Xcode product" \
+		|| { echo "the Xcode build did not link the Rust core"; exit 1; }
+
+## Generate form.xcodeproj and open it. The project is not committed — it is regenerated
+## from project.yml, so it cannot drift or conflict. Hitting Run in Xcode builds the Rust
+## core first via a pre-build phase.
+xcode: form.xcodeproj
+	@open form.xcodeproj
+
+form.xcodeproj: project.yml app/Package.swift
+	@command -v xcodegen >/dev/null || { \
+		echo "xcodegen not found. Install it with: brew install xcodegen"; exit 1; }
+	@echo "==> xcodegen"
+	@xcodegen generate --quiet
 
 clean:
 	@cd $(CORE_DIR) && cargo clean

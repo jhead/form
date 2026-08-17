@@ -10,7 +10,9 @@ The agent harness is **not** implemented here. It is being ported in parallel in
 [`pi-rs`](../pi-rs). `form` ships against a stub harness that emits the same event protocol,
 so the entire UX runs with no LLM backend and no API keys.
 
-## Build
+## Build and run
+
+From the command line:
 
 ```bash
 make          # rust core + swift package + app/build/form.app
@@ -20,7 +22,21 @@ make lint     # cargo fmt --check + clippy -D warnings
 make cli      # stream a stub run to the terminal, no Swift involved
 ```
 
-Requires Xcode 16+, Swift 6, and a Rust toolchain.
+In Xcode:
+
+```bash
+make xcode    # generate form.xcodeproj and open it, then press ⌘R
+```
+
+The project is generated from [`project.yml`](project.yml) and is **not** committed — a
+generated project cannot drift or produce merge conflicts, and SwiftPM stays the source of
+truth. The app target compiles `app/Sources/form` and links the package's library products,
+so there is exactly one copy of every source file. A pre-build phase runs
+[`scripts/build-core.sh`](scripts/build-core.sh) — the same script `make` uses — so pressing
+Run in Xcode rebuilds the Rust core first. Both paths share one `Info.plist`.
+
+Requires Xcode 16+, Swift 6, a Rust toolchain, and `xcodegen` (`brew install xcodegen`) for
+the Xcode path only.
 
 ## Layout
 

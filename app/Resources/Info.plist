@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Literal values only, no $(BUILD_SETTING) substitutions: this same file is copied
+         verbatim into the bundle by scripts/build-app.sh, which has no Xcode to expand them. -->
+    <key>CFBundleName</key>              <string>form</string>
+    <key>CFBundleDisplayName</key>       <string>form</string>
+    <key>CFBundleExecutable</key>        <string>form</string>
+    <key>CFBundleIdentifier</key>        <string>dev.jhead.form</string>
+    <key>CFBundleInfoDictionaryVersion</key> <string>6.0</string>
+    <key>CFBundlePackageType</key>       <string>APPL</string>
+    <key>CFBundleShortVersionString</key> <string>0.1.0</string>
+    <key>CFBundleVersion</key>           <string>1</string>
+    <key>LSMinimumSystemVersion</key>    <string>14.0</string>
+    <key>NSHighResolutionCapable</key>   <true/>
+    <key>NSSupportsAutomaticGraphicsSwitching</key> <true/>
+    <key>NSPrincipalClass</key>          <string>NSApplication</string>
+    <!-- Unsandboxed by design for the MVP: the agent needs arbitrary workspace roots. -->
+</dict>
+</plist>

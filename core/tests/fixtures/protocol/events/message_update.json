@@ -1,0 +1,40 @@
+{
+  "commandId": "cmd_7be31a90c5d24e88",
+  "entryId": "ent_3d5f8821aa094c60",
+  "event": {
+    "contentIndex": 0,
+    "delta": "th endpoint",
+    "partial": {
+      "api": "anthropic-messages",
+      "content": [
+        {
+          "text": "I'll add the heal",
+          "type": "text"
+        }
+      ],
+      "model": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "responseId": "msg_01Hx9QpR2tVw",
+      "stopReason": "pending",
+      "timestamp": 1755112233444,
+      "usage": {
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "cost": {
+          "cacheRead": 0.0,
+          "cacheWrite": 0.0,
+          "input": 0.0,
+          "output": 0.0,
+          "total": 0.0
+        },
+        "input": 0,
+        "output": 0,
+        "totalTokens": 0
+      }
+    },
+    "type": "text_delta"
+  },
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "timestamp": 1755112233444,
+  "type": "message_update"
+}

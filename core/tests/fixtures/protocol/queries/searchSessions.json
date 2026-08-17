@@ -1,0 +1,5 @@
+{
+  "limit": 25,
+  "q": "health check",
+  "type": "searchSessions"
+}

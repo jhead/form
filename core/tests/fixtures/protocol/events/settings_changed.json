@@ -1,0 +1,87 @@
+{
+  "commandId": "cmd_7be31a90c5d24e88",
+  "settings": {
+    "advanced": {
+      "dataDir": "/Users/x/Library/Application Support/form",
+      "harnessSpeed": 2.5,
+      "logLevel": "info"
+    },
+    "appearance": {
+      "density": "comfortable",
+      "showTurnFooters": true,
+      "sidebarCollapsed": true,
+      "sidebarWidth": 300.0,
+      "textSizeMultiplier": 1.15,
+      "themeMode": "system"
+    },
+    "defaults": {
+      "modelRef": {
+        "modelId": "claude-opus-5",
+        "providerId": "anthropic",
+        "thinkingLevel": "high"
+      },
+      "queueMode": "queue",
+      "systemPrompt": "Prefer small diffs and cite file paths.",
+      "toolExecution": "parallel"
+    },
+    "editor": {
+      "font": "Berkeley Mono",
+      "fontSize": 12.0,
+      "showLineNumbers": true,
+      "tabWidth": 4,
+      "wrapCode": true
+    },
+    "general": {
+      "autoTitleSessions": true,
+      "confirmOnDelete": true,
+      "startupView": "home",
+      "telemetry": true
+    },
+    "providers": {
+      "anthropic": {
+        "enabled": true,
+        "hasKey": true
+      },
+      "deepseek": {
+        "enabled": true,
+        "hasKey": false
+      },
+      "google": {
+        "enabled": true,
+        "hasKey": false
+      },
+      "groq": {
+        "enabled": true,
+        "hasKey": false
+      },
+      "mistral": {
+        "enabled": true,
+        "hasKey": false
+      },
+      "ollama": {
+        "baseUrlOverride": "http://127.0.0.1:11434",
+        "enabled": true,
+        "hasKey": false
+      },
+      "openai": {
+        "enabled": true,
+        "hasKey": false
+      },
+      "openrouter": {
+        "enabled": true,
+        "hasKey": false
+      },
+      "xai": {
+        "enabled": true,
+        "hasKey": false
+      }
+    },
+    "shortcuts": {
+      "chat.send": "cmd+return",
+      "session.new": "cmd+n"
+    },
+    "version": 1
+  },
+  "timestamp": 1755112233444,
+  "type": "settings_changed"
+}

@@ -17,6 +17,9 @@ let package = Package(
         .library(name: "FormCore", targets: ["FormCore"]),
         .library(name: "FormDesign", targets: ["FormDesign"]),
         .library(name: "FormMarkdown", targets: ["FormMarkdown"]),
+        // Exposed as a product so the Xcode app target can link it; the Xcode target
+        // compiles Sources/form and links these, keeping one copy of every source file.
+        .library(name: "FormUI", targets: ["FormUI"]),
     ],
     targets: [
         // C module map over core/include/form.h. Owned by W7.

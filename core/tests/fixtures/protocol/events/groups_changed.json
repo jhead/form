@@ -1,0 +1,18 @@
+{
+  "groups": [
+    {
+      "collapsed": true,
+      "id": "grp_41ab77c2e8ff4b03",
+      "index": 1,
+      "name": "API work"
+    },
+    {
+      "collapsed": false,
+      "id": "grp_5e0a91bb7c114d38",
+      "index": 2,
+      "name": "Scratch"
+    }
+  ],
+  "timestamp": 1755112233444,
+  "type": "groups_changed"
+}

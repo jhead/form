@@ -1,0 +1,12 @@
+{
+  "args": {
+    "path": "src/server/health.rs",
+    "startLine": 42
+  },
+  "commandId": "cmd_7be31a90c5d24e88",
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "timestamp": 1755112233444,
+  "toolCallId": "toolu_0af31d6c",
+  "toolName": "read",
+  "type": "tool_execution_start"
+}

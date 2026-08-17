@@ -1,0 +1,74 @@
+{
+  "blocks": [
+    {
+      "id": "b0-226e8190e648",
+      "partial": false,
+      "type": "paragraph",
+      "spans": [
+        {
+          "type": "text",
+          "text": "Here is the function you asked for."
+        }
+      ]
+    },
+    {
+      "id": "b1-a0fb2b0f3f2e",
+      "partial": true,
+      "type": "codeBlock",
+      "language": "rust",
+      "code": "fn main() {\n    let x = 1;\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 2,
+          "scope": "storage.type.function.rust"
+        },
+        {
+          "start": 3,
+          "len": 4,
+          "scope": "entity.name.function.rust"
+        },
+        {
+          "start": 7,
+          "len": 1,
+          "scope": "punctuation.section.parameters.begin.rust"
+        },
+        {
+          "start": 8,
+          "len": 1,
+          "scope": "punctuation.section.parameters.end.rust"
+        },
+        {
+          "start": 10,
+          "len": 1,
+          "scope": "punctuation.section.block.begin.rust"
+        },
+        {
+          "start": 16,
+          "len": 3,
+          "scope": "storage.type.rust"
+        },
+        {
+          "start": 20,
+          "len": 1,
+          "scope": "meta.block.rust"
+        },
+        {
+          "start": 22,
+          "len": 1,
+          "scope": "keyword.operator.rust"
+        },
+        {
+          "start": 24,
+          "len": 1,
+          "scope": "constant.numeric.integer.decimal.rust"
+        },
+        {
+          "start": 25,
+          "len": 1,
+          "scope": "punctuation.terminator.rust"
+        }
+      ]
+    }
+  ]
+}

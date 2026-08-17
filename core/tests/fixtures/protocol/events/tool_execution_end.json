@@ -1,0 +1,13 @@
+{
+  "commandId": "cmd_7be31a90c5d24e88",
+  "isError": false,
+  "result": {
+    "linesAdded": 268,
+    "linesRemoved": 0,
+    "text": "read 268 lines"
+  },
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "timestamp": 1755112233444,
+  "toolCallId": "toolu_0af31d6c",
+  "type": "tool_execution_end"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "ent_c15e7d4488aa4f26",
+  "parentId": "ent_0c19b4e77f2d4a15",
+  "seq": 11,
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "summary": "Earlier turns condensed: routing, tests, and the deploy script.",
+  "timestamp": 1755112233444,
+  "tokensBefore": 142880,
+  "type": "compaction"
+}

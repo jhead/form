@@ -1,0 +1,9 @@
+{
+  "id": "ent_b90cf1a233ee4d17",
+  "parentId": "ent_0c19b4e77f2d4a15",
+  "seq": 10,
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "thinkingLevel": "xhigh",
+  "timestamp": 1755112233444,
+  "type": "thinking_level_change"
+}

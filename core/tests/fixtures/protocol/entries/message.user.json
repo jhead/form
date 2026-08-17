@@ -1,0 +1,22 @@
+{
+  "id": "ent_0c19b4e77f2d4a15",
+  "message": {
+    "content": [
+      {
+        "text": "Add a /healthz endpoint. See the screenshot.",
+        "type": "text"
+      },
+      {
+        "data": "iVBORw0KGgoAAAANSUhEUg==",
+        "mimeType": "image/png",
+        "type": "image"
+      }
+    ],
+    "role": "user",
+    "timestamp": 1755112228444
+  },
+  "seq": 6,
+  "sessionId": "ses_9f2c14aa7b0e4d1e",
+  "timestamp": 1755112228444,
+  "type": "message"
+}

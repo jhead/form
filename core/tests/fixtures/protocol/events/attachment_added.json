@@ -1,0 +1,18 @@
+{
+  "attachment": {
+    "bytes": 284913,
+    "createdAt": 1755108633444,
+    "filename": "dashboard.png",
+    "height": 982,
+    "id": "att_88c1e0f39d7b4a25",
+    "mime": "image/png",
+    "path": "/Users/x/Library/Application Support/form/attachments/9f86d0.png",
+    "sessionId": "ses_9f2c14aa7b0e4d1e",
+    "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "thumbPath": "/Users/x/Library/Application Support/form/attachments/9f86d0.thumb.png",
+    "width": 1512
+  },
+  "commandId": "cmd_7be31a90c5d24e88",
+  "timestamp": 1755112233444,
+  "type": "attachment_added"
+}

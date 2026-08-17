@@ -1,0 +1,39 @@
+{
+  "timestamp": 1755112233444,
+  "type": "context_usage_changed",
+  "usage": {
+    "cost": {
+      "cacheRead": 0.00246,
+      "cacheWrite": 0.00384,
+      "input": 0.03744,
+      "output": 0.03465,
+      "total": 0.07839
+    },
+    "messageCount": 18,
+    "segments": [
+      {
+        "kind": "system",
+        "tokens": 1820
+      },
+      {
+        "kind": "tools",
+        "tokens": 4310
+      },
+      {
+        "kind": "transcript",
+        "tokens": 46990
+      },
+      {
+        "kind": "attachments",
+        "tokens": 4320
+      },
+      {
+        "kind": "outputReserve",
+        "tokens": 4000
+      }
+    ],
+    "sessionId": "ses_9f2c14aa7b0e4d1e",
+    "total": 200000,
+    "used": 61440
+  }
+}
