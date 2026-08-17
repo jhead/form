@@ -1,0 +1,8 @@
+// The canonical header lives with the Rust crate that defines it; this module map points at
+// it rather than keeping a second copy in sync. `link` supplies -lform_ffi; the Makefile
+// supplies the -L search path for the profile being built.
+module FormFFI {
+    header "../../../core/include/form.h"
+    link "form_ffi"
+    export *
+}

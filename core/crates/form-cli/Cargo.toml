@@ -1,0 +1,18 @@
+[package]
+name = "form-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Drives form-core through the C ABI. The end-to-end proof, and the fastest debugging loop for core work."
+
+[[bin]]
+name = "form-cli"
+path = "src/main.rs"
+
+[dependencies]
+# Deliberately linked through the C API rather than form-core directly — that is what makes
+# this an FFI test instead of a library test.
+form-ffi.workspace = true
+form-core.workspace = true
+serde_json.workspace = true
