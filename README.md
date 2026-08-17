@@ -2,6 +2,8 @@
 
 A macOS client for a coding agent in Swift and Rust.
 
+![form](docs/images/home.png)
+
 ## Build and run
 
 From the command line:
