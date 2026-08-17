@@ -70,15 +70,11 @@ public struct PendingAttachment: Identifiable, Sendable, Equatable {
 }
 
 public enum AttachmentFormat {
-    private static let byteFormatter: ByteCountFormatter = {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        formatter.allowsNonnumericFormatting = false
-        return formatter
-    }()
-
+    /// The type method rather than a shared instance: `ByteCountFormatter` is not `Sendable`,
+    /// and a formatter cached in a `static let` is exactly the shared mutable state Swift 6
+    /// refuses.
     public static func size(_ bytes: Int64) -> String {
-        byteFormatter.string(fromByteCount: max(0, bytes))
+        ByteCountFormatter.string(fromByteCount: max(0, bytes), countStyle: .file)
     }
 
     /// Truncates in the middle, so both the name and the extension survive (spec 13, tray).

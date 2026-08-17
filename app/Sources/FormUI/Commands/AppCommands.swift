@@ -8,7 +8,7 @@ import SwiftUI
 /// Every key equivalent in `form` is declared here and nowhere else. Adding a shortcut means
 /// adding a row; the menu bar, the key monitor, the command palette, the cheat sheet and the
 /// Shortcuts preferences tab pick it up with no other edit. `AppCommandTableTests` fails the
-/// build if a `keyboardShortcut` appears anywhere outside `CommandMenus.swift`.
+/// build if a key equivalent is declared anywhere but here.
 public enum AppCommands {
     public static let all: [AppCommand] = file + edit + view + session + navigate + help
 

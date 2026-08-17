@@ -41,18 +41,43 @@ public struct SidebarView: View {
         SessionCommands(stores: stores, appState: appState)
     }
 
+    /// The scroll view is the base and the fixed rows are safe-area insets rather than
+    /// siblings in a `VStack`: the split view proposes the sidebar column its content's
+    /// height, so in a stack the scroll view claims every row it has and pushes the controls
+    /// and the footer out of the window. As insets they are pinned and the scroll region is
+    /// whatever is left — which is also how AppKit builds a sidebar.
     public var body: some View {
         withPrompts(
-            VStack(spacing: 0) {
-                controlRow
-                segmentRow
-                newRow
-                list
-                FormDivider(inset: theme.metrics.spacing.lg)
-                SidebarFooter(
-                    stores: stores, appState: appState, themeController: themeController)
-            }
-            .sidebarBackground()
+            list
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    VStack(spacing: 0) {
+                        controlRow
+                        segmentRow
+                        newRow
+                    }
+                    .background(theme.color.backgroundSidebar)
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    VStack(spacing: 0) {
+                        FormDivider(inset: theme.metrics.spacing.lg)
+                        SidebarFooter(
+                            stores: stores, appState: appState,
+                            themeController: themeController)
+                    }
+                    .background(theme.color.backgroundSidebar)
+                }
+                // `idealHeight` is the load-bearing part: a scroll view reports its content
+                // as its ideal size, and the split view asks the sidebar for exactly that
+                // when it decides how tall to be. Pinning the ideal to the window minimum
+                // keeps a 26-row corpus from making the window 1600 pt tall.
+                .frame(
+                    maxWidth: .infinity,
+                    idealHeight: theme.metrics.windowMinHeight,
+                    maxHeight: .infinity)
+                .sidebarBackground()
+                // The split view offers its own toggle in the title bar; the sidebar's own
+                // control row is the one spec 09 §2 asks for.
+                .toolbar(removing: .sidebarToggle)
         )
     }
 
@@ -162,6 +187,10 @@ public struct SidebarView: View {
             .padding(.bottom, theme.metrics.spacing.lg)
         }
         .scrollContentBackground(.hidden)
+        // The sidebar column proposes its content's ideal height, so without this the scroll
+        // view claims the full height of every row and the fixed rows above and the footer
+        // below get pushed out of the window.
+        .frame(maxHeight: .infinity)
         // A drag released outside every target still has to clear the indicator.
         .onChange(of: dragState.isDragging) { _, isDragging in
             if !isDragging { dragState.target = nil }

@@ -77,9 +77,11 @@ struct LatencyDistribution: View {
             .interpolationMethod(.monotone)
             .lineStyle(StrokeStyle(lineWidth: theme.metrics.hairline * 4, lineJoin: .round))
 
+            // Unstacked: three models' distributions are compared, not summed.
             AreaMark(
                 x: .value("TTFT", point.bin),
-                y: .value("Turns", point.count)
+                y: .value("Turns", point.count),
+                stacking: .unstacked
             )
             .foregroundStyle(by: .value("Model", point.model))
             .opacity(0.12)

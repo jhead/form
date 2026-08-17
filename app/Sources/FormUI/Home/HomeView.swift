@@ -69,9 +69,11 @@ public struct HomeView: View {
                 controls
                 content
             }
-            .frame(maxWidth: theme.metrics.dashboardMaxWidth, alignment: .leading)
+            // Gutters sit inside the 1100 pt column, so the cards line up with the window's
+            // centre no matter how wide it gets (spec 12 §1).
             .padding(.horizontal, theme.metrics.spacing.xxxl)
             .padding(.vertical, theme.metrics.spacing.xl2)
+            .frame(maxWidth: theme.metrics.dashboardMaxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
         .contentBackground()

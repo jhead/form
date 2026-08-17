@@ -47,7 +47,7 @@ struct RankedBarChart: View {
                 }
             }
         }
-        .formChartValueXAxis(theme, format, desiredCount: 4)
+        .formChartValueXAxis(theme, format, desiredCount: 3)
         .frame(height: CGFloat(max(rows.count, 1)) * metrics.rankRowHeight)
         .accessibilityElement(children: .contain)
     }

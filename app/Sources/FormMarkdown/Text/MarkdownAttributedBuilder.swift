@@ -40,10 +40,17 @@ struct MarkdownAttributedBuilder {
 
     // MARK: - Blocks
 
+    /// Blocks are joined by an explicit *separator* node rather than by a trailing newline on
+    /// each block. That is what keeps copy exact: the separator sits outside both blocks, so
+    /// selecting one paragraph yields the paragraph and selecting two yields the blank line
+    /// between them — and nesting a list inside a list does not accumulate one closing
+    /// newline per level, which is how a copied nested list turns into three separate lists.
     private mutating func blocks(_ blocks: [MarkdownBlock], depth: Int) {
         for (index, block) in blocks.enumerated() {
-            let node = self.block(block, depth: depth, isLast: index == blocks.count - 1)
-            if let node { roots.append(node) }
+            if index > 0 { roots.append(separator("\n\n")) }
+            if let node = self.block(block, depth: depth, isLast: index == blocks.count - 1) {
+                roots.append(node)
+            }
         }
     }
 
@@ -52,7 +59,7 @@ struct MarkdownAttributedBuilder {
     ) -> SourceNode? {
         switch block.kind {
         case let .paragraph(spans):
-            return wrapped(open: linePrefix(depth), close: "\n\n", trailingNewline: !isLast) {
+            return opened(linePrefix(depth)) {
                 $0.paragraphStyled(depth: depth, spacing: isLast ? 0 : $0.metrics.blockSpacing) {
                     $0.inline(spans, attributes: .body($0.metrics))
                 }
@@ -60,9 +67,7 @@ struct MarkdownAttributedBuilder {
 
         case let .heading(level, spans, _):
             let hashes = String(repeating: "#", count: max(1, min(6, level)))
-            return wrapped(
-                open: "\(linePrefix(depth))\(hashes) ", close: "\n\n", trailingNewline: !isLast
-            ) {
+            return opened("\(linePrefix(depth))\(hashes) ") {
                 $0.paragraphStyled(
                     depth: depth,
                     spacing: isLast ? 0 : $0.metrics.blockSpacing,
@@ -84,7 +89,7 @@ struct MarkdownAttributedBuilder {
         case let .html(raw):
             // Escaped monospace text, never interpreted (spec 11 §2). The core already
             // captured it as text; all we do is refuse to give it any semantics.
-            return wrapped(open: linePrefix(depth), close: "\n\n", trailingNewline: !isLast) {
+            return opened(linePrefix(depth)) {
                 $0.paragraphStyled(depth: depth, spacing: isLast ? 0 : $0.metrics.blockSpacing) {
                     [
                         $0.literal(
@@ -97,11 +102,8 @@ struct MarkdownAttributedBuilder {
             }
 
         case let .footnoteDef(label, blocks):
-            return wrapped(
-                open: "\(linePrefix(depth))[^\(label)]: ", close: "\n\n", trailingNewline: !isLast
-            ) { builder in
-                var children: [SourceNode] = []
-                builder.paragraphStyled(
+            return opened("\(linePrefix(depth))[^\(label)]: ") { builder in
+                var children = builder.paragraphStyled(
                     depth: depth, spacing: builder.metrics.listItemSpacing
                 ) {
                     [
@@ -112,8 +114,9 @@ struct MarkdownAttributedBuilder {
                                 color: $0.metrics.theme.color.textTertiary),
                             source: "")
                     ]
-                }.forEach { children.append($0) }
+                }
                 for (index, inner) in blocks.enumerated() {
+                    if index > 0 { children.append(builder.separator("\n")) }
                     if let node = builder.block(
                         inner, depth: depth + 1, isLast: index == blocks.count - 1)
                     {
@@ -133,69 +136,63 @@ struct MarkdownAttributedBuilder {
         ordered: Bool, start: Int64, tight: Bool, items: [ListItem], depth: Int, isLast: Bool
     ) -> SourceNode {
         let renderedStart = out.length
-        let sourceOpen = NSRange(location: src.length, length: 0)
+        let sourceStart = NSRange(location: src.length, length: 0)
         var children: [SourceNode] = []
+        let itemGap = tight ? metrics.listItemSpacing : metrics.blockSpacing
 
         for (index, item) in items.enumerated() {
             let number = start &+ Int64(index)
-            let markerSource = ordered ? "\(number). " : "- "
             let task = item.checked.map { $0 ? "[x] " : "[ ] " } ?? ""
             let lastItem = index == items.count - 1
+            // The gap after this item — zero only when nothing follows it anywhere.
+            let gap = lastItem && isLast ? 0 : itemGap
 
-            let node = wrapped(
-                open: "\(linePrefix(depth))\(markerSource)\(task)",
-                close: "\n",
-                trailingNewline: !(lastItem && isLast)
-            ) { builder in
-                var parts: [SourceNode] = []
-                let marker = ordered ? "\(number)." : builder.metrics.bullet(depth: depth)
-                let box = item.checked.map { "\(MarkdownMetrics.checkbox($0)) " } ?? ""
+            if index > 0 { children.append(separator("\n")) }
 
-                // The marker is text, not a control: it has to select and copy with the item.
-                parts += builder.paragraphStyled(
-                    depth: depth,
-                    spacing: lastItem && isLast
-                        ? 0 : (tight ? builder.metrics.listItemSpacing : builder.metrics.blockSpacing)
-                ) {
-                    [
-                        $0.literal(
-                            "\(marker) \(box)",
-                            attributes: InlineAttributes(
-                                style: $0.metrics.body,
-                                color: $0.metrics.theme.color.textSecondary),
-                            source: "")
-                    ]
-                }
+            children.append(
+                opened("\(linePrefix(depth))\(ordered ? "\(number). " : "- ")\(task)") { builder in
+                    let marker = ordered ? "\(number)." : builder.metrics.bullet(depth: depth)
+                    let box = item.checked.map { "\(MarkdownMetrics.checkbox($0)) " } ?? ""
 
-                // The first block of the item continues the marker's line; anything after it
-                // is a nested block at the item's indent.
-                for (blockIndex, inner) in item.blocks.enumerated() {
-                    let innerLast = blockIndex == item.blocks.count - 1
-                    if blockIndex == 0, case let .paragraph(spans) = inner.kind {
-                        parts += builder.paragraphStyled(
-                            depth: depth,
-                            spacing: innerLast
-                                ? 0
-                                : (tight
-                                    ? builder.metrics.listItemSpacing : builder.metrics.blockSpacing)
-                        ) {
-                            $0.inline(spans, attributes: .body($0.metrics))
-                        }
-                        if !innerLast { builder.newline() }
-                    } else if let node = builder.block(
-                        inner, depth: depth + 1, isLast: innerLast)
-                    {
-                        parts.append(node)
+                    // The marker is text, not a control: it has to select and copy with the
+                    // item, and its paragraph style is the one the line is laid out with.
+                    var parts = builder.paragraphStyled(depth: depth, spacing: gap) {
+                        [
+                            $0.literal(
+                                "\(marker) \(box)",
+                                attributes: InlineAttributes(
+                                    style: $0.metrics.body,
+                                    color: $0.metrics.theme.color.textSecondary),
+                                source: "")
+                        ]
                     }
-                }
-                return parts
-            }
-            children.append(node)
+
+                    // The item's first paragraph continues the marker's line; anything after
+                    // it is a nested block one level in.
+                    for (blockIndex, inner) in item.blocks.enumerated() {
+                        let innerLast = blockIndex == item.blocks.count - 1
+                        if blockIndex == 0, case let .paragraph(spans) = inner.kind {
+                            parts += builder.paragraphStyled(
+                                depth: depth, spacing: innerLast ? gap : itemGap
+                            ) {
+                                $0.inline(spans, attributes: .body($0.metrics))
+                            }
+                            continue
+                        }
+                        parts.append(builder.separator("\n"))
+                        if let node = builder.block(
+                            inner, depth: depth + 1, isLast: innerLast && lastItem && isLast)
+                        {
+                            parts.append(node)
+                        }
+                    }
+                    return parts
+                })
         }
 
         return .wrapper(
             rendered: NSRange(location: renderedStart, length: out.length - renderedStart),
-            open: sourceOpen,
+            open: sourceStart,
             close: NSRange(location: src.length, length: 0),
             children: children
         )
@@ -297,24 +294,37 @@ struct MarkdownAttributedBuilder {
             open: openRange, close: closeRange, children: children)
     }
 
-    /// A block: delimiters plus the rendered newline that separates it from the next one.
-    private mutating func wrapped(
-        open: String, close: String, trailingNewline: Bool, _ body: (inout Self) -> [SourceNode]
+    /// A block: a source-only prefix (`## `, `- `, a quote's `> `) plus its content.
+    private mutating func opened(
+        _ open: String, _ body: (inout Self) -> [SourceNode]
     ) -> SourceNode {
         let renderedStart = out.length
         let openRange = NSRange(location: src.length, length: (open as NSString).length)
         src.append(open)
         let children = body(&self)
-        if trailingNewline { newline() }
-        let closeRange = NSRange(location: src.length, length: (close as NSString).length)
-        src.append(close)
         return .wrapper(
             rendered: NSRange(location: renderedStart, length: out.length - renderedStart),
-            open: openRange, close: closeRange, children: children)
+            open: openRange,
+            close: NSRange(location: src.length, length: 0),
+            children: children)
     }
 
+    /// The break between two blocks: one rendered newline, `source` in the markdown.
+    private mutating func separator(_ source: String) -> SourceNode {
+        let rendered = NSRange(location: out.length, length: 1)
+        newline()
+        let sourceRange = NSRange(location: src.length, length: (source as NSString).length)
+        src.append(source)
+        return .leaf(rendered: rendered, source: sourceRange, literal: false)
+    }
+
+    /// The newline terminates the *preceding* paragraph, so it inherits that paragraph's
+    /// attributes — an unattributed one would be laid out at the default system size and
+    /// change the line's height.
     private mutating func newline() {
-        out.append(NSAttributedString(string: "\n"))
+        let attributes =
+            out.length > 0 ? out.attributes(at: out.length - 1, effectiveRange: nil) : [:]
+        out.append(NSAttributedString(string: "\n", attributes: attributes))
     }
 
     /// Runs `body` and applies one paragraph style to everything it appended. Indents are
@@ -393,12 +403,44 @@ struct InlineAttributes {
     }
 
     private var font: NSFont {
-        let resolved = bold ? style.weighted(.semibold) : style
-        let base = resolved.nsFont
-        guard italic else { return base }
+        MarkdownFontCache.shared.font(
+            size: style.size, weight: bold ? .semibold : style.weight, family: style.family,
+            italic: italic)
+    }
+}
+
+/// Resolving an `NSFont` is not free, and a streamed document asks for the same half-dozen
+/// of them thousands of times a second. Memoizing them is the single cheapest thing that
+/// keeps the streaming budget honest.
+final class MarkdownFontCache: @unchecked Sendable {
+    static let shared = MarkdownFontCache()
+
+    private struct Key: Hashable {
+        let size: CGFloat
+        let weight: FontWeightToken
+        let family: FontFamily
+        let italic: Bool
+    }
+
+    private let lock = NSLock()
+    private var fonts: [Key: NSFont] = [:]
+
+    func font(size: CGFloat, weight: FontWeightToken, family: FontFamily, italic: Bool) -> NSFont {
+        let key = Key(size: size, weight: weight, family: family, italic: italic)
+        lock.lock()
+        defer { lock.unlock() }
+        if let hit = fonts[key] { return hit }
+        let resolved = Self.resolve(key)
+        fonts[key] = resolved
+        return resolved
+    }
+
+    private static func resolve(_ key: Key) -> NSFont {
+        let base = TypeStyle(size: key.size, weight: key.weight, family: key.family).nsFont
+        guard key.italic else { return base }
         let italicised = NSFontManager.shared.convert(base, toHaveTrait: .italicFontMask)
-        // `convert` returns the input when the family has no italic face; the oblique
-        // matrix is the fallback so emphasis is never silently invisible.
+        // `convert` returns the input when the family has no italic face; the oblique matrix
+        // is the fallback so emphasis is never silently invisible.
         guard italicised == base else { return italicised }
         return NSFont(
             descriptor: base.fontDescriptor.withSymbolicTraits(.italic), size: base.pointSize)

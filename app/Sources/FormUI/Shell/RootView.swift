@@ -56,9 +56,14 @@ public struct RootView<HomeContent: View, SessionContent: View>: View {
                 stores: stores, appState: appState, home: home, session: session)
         }
         .navigationSplitViewStyle(.balanced)
+        // `maxHeight` is not decoration: `NavigationSplitView` sizes itself to the taller
+        // column's ideal height, so with only a minimum the sidebar's full row list makes the
+        // whole split view taller than the window and it overflows off both edges.
         .frame(
             minWidth: theme.metrics.windowMinWidth,
-            minHeight: theme.metrics.windowMinHeight)
+            maxWidth: .infinity,
+            minHeight: theme.metrics.windowMinHeight,
+            maxHeight: .infinity)
         .background(
             WindowConfigurator(
                 autosaveName: "form.main",

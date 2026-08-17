@@ -83,3 +83,10 @@ struct MarkdownTableView: View {
         }
     }
 }
+
+#Preview("table") {
+    ThemePreview {
+        MarkdownView(doc: MarkdownFixture.tableOnly)
+    }
+    .frame(width: 900)
+}

@@ -152,6 +152,52 @@ struct MarkdownRenderingTests {
                 """)
     }
 
+    @Test("copying a nested list yields one list, not three")
+    func copyReproducesNesting() {
+        // Blocks are separated by an explicit node rather than by a trailing newline each,
+        // because the trailing-newline shape accumulates one blank line per nesting level and
+        // a blank line inside a list is what splits it into separate lists on re-parse.
+        let doc = MarkdownFixture.doc([
+            .list(
+                ordered: false, start: 1, tight: true,
+                items: [
+                    MarkdownFixture.item([.paragraph(spans: [.text(text: "one")])]),
+                    MarkdownFixture.item([
+                        .paragraph(spans: [.text(text: "two")]),
+                        .list(
+                            ordered: false, start: 1, tight: true,
+                            items: [
+                                MarkdownFixture.item([
+                                    .paragraph(spans: [.text(text: "two a")])
+                                ]),
+                                MarkdownFixture.item([
+                                    .paragraph(spans: [.text(text: "two b")]),
+                                    .list(
+                                        ordered: true, start: 1, tight: true,
+                                        items: [
+                                            MarkdownFixture.item([
+                                                .paragraph(spans: [.text(text: "deep")])
+                                            ])
+                                        ]),
+                                ]),
+                            ]),
+                    ]),
+                    MarkdownFixture.item([.paragraph(spans: [.text(text: "three")])]),
+                ])
+        ])
+        let rendered = MarkdownAttributedBuilder.render(doc.blocks, metrics: metrics)
+        let all = NSRange(location: 0, length: rendered.attributed.length)
+        #expect(
+            rendered.markdown(for: all) == """
+                - one
+                - two
+                  - two a
+                  - two b
+                    1. deep
+                - three
+                """)
+    }
+
     @Test("a quote's own run copies back as a quote")
     func quotePrefixSurvivesCopy() {
         let inner = [MarkdownFixture.block(0, .paragraph(spans: [.text(text: "quoted")]))]
@@ -426,14 +472,15 @@ struct MarkdownRenderingTests {
         #expect(short.first?.id == grown.first?.id)
         #expect(short.first?.contentKey != grown.first?.contentKey)
     }
-}
 
-@MainActor
-struct DebugFingerprint {
-    @Test("fingerprint determinism")
-    func deterministic() {
-        let a = MarkdownFixture.block(1, .paragraph(spans: [.text(text: "one two")]))
-        let b = MarkdownFixture.block(1, .paragraph(spans: [.text(text: "one two")]))
-        #expect(a.id == b.id, "\(a.id) vs \(b.id)")
+    @Test("a block id is a function of the block, so identity is reproducible")
+    func idsAreStable() {
+        let first = MarkdownFixture.block(1, .paragraph(spans: [.text(text: "same")]))
+        let second = MarkdownFixture.block(1, .paragraph(spans: [.text(text: "same")]))
+        let other = MarkdownFixture.block(1, .paragraph(spans: [.text(text: "different")]))
+        #expect(first.id == second.id)
+        #expect(first.id != other.id)
+        #expect(first.id != MarkdownFixture.block(2, .paragraph(spans: [.text(text: "same")])).id)
     }
 }
+

@@ -27,8 +27,15 @@ use crate::protocol::*;
 use crate::settings::{Settings, SettingsStore};
 use crate::stats;
 
-/// Prompts sent while a run is streaming, per session (F1.7).
-type PromptQueues = Arc<Mutex<HashMap<String, VecDeque<String>>>>;
+/// A prompt sent while a run was streaming, held until the next turn boundary (F1.7).
+/// Carries its attachments, so queueing does not quietly drop them.
+#[derive(Debug, Clone)]
+pub struct QueuedPrompt {
+    pub text: String,
+    pub attachment_ids: Vec<String>,
+}
+
+type PromptQueues = Arc<Mutex<HashMap<String, VecDeque<QueuedPrompt>>>>;
 
 pub struct Core {
     config: CoreConfig,
@@ -226,8 +233,10 @@ impl Core {
             }
 
             Command::SendPrompt {
-                session_id, text, ..
-            } => self.start_run(session_id, text, cmd),
+                session_id,
+                text,
+                attachment_ids,
+            } => self.start_run(session_id, text, attachment_ids, cmd),
 
             Command::AbortRun { session_id } => {
                 if let Some(signal) = self.active.lock().unwrap().get(&session_id) {
@@ -310,7 +319,7 @@ impl Core {
                 self.store.truncate_after(&session_id, &entry_id)?;
                 let session = self.store.get_summary(&session_id)?;
                 self.emit(EventKind::SessionUpdated { session }, &cmd);
-                self.start_run(session_id, prompt, cmd)
+                self.start_run(session_id, prompt, Vec::new(), cmd)
             }
 
             // --- groups ---
@@ -379,6 +388,15 @@ impl Core {
                 }
                 Ok(())
             }
+            Command::SetAttachmentThumbnail {
+                attachment_id,
+                path,
+            } => {
+                self.store.set_thumb_path(&attachment_id, &path)?;
+                let attachment = self.store.get_attachment(&attachment_id)?;
+                self.emit(EventKind::AttachmentAdded { attachment }, &cmd);
+                Ok(())
+            }
             Command::RemoveAttachment { attachment_id } => {
                 self.store.remove_attachment(&attachment_id)?;
                 self.emit(EventKind::AttachmentRemoved { attachment_id }, &cmd);
@@ -425,11 +443,51 @@ impl Core {
             .ok_or_else(|| CoreError::InvalidRequest(format!("{entry_id} is not a user message")))
     }
 
+    /// Build the user message, folding in any attachments so they are part of the transcript
+    /// rather than a UI-only decoration (F3.5). Images become `ImageContent` blocks; anything
+    /// else is named in text, which is all a model could do with it anyway.
+    fn user_message(&self, prompt: &str, attachment_ids: &[String]) -> UserMessage {
+        if attachment_ids.is_empty() {
+            return UserMessage::text(prompt);
+        }
+
+        let mut blocks = Vec::with_capacity(attachment_ids.len() + 1);
+        for id in attachment_ids {
+            let Ok(attachment) = self.store.get_attachment(id) else {
+                continue;
+            };
+            let is_image = attachment.mime.starts_with("image/");
+            let bytes = is_image
+                .then(|| std::fs::read(&attachment.path).ok())
+                .flatten();
+
+            match bytes {
+                Some(bytes) => blocks.push(InputContent::Image(ImageContent {
+                    data: base64::engine::general_purpose::STANDARD.encode(bytes),
+                    mime_type: attachment.mime.clone(),
+                })),
+                // A file we cannot inline is still worth naming — silently dropping it would
+                // leave the transcript disagreeing with what the user saw themselves send.
+                None => blocks.push(InputContent::text(format!(
+                    "[attached: {} ({}, {} bytes)]",
+                    attachment.filename, attachment.mime, attachment.bytes
+                ))),
+            }
+        }
+        blocks.push(InputContent::text(prompt));
+
+        UserMessage {
+            content: UserContent::Blocks(blocks),
+            timestamp: now_ms(),
+        }
+    }
+
     /// Spawn a run on the tokio runtime. Returns immediately; everything else is events.
     fn start_run(
         &self,
         session_id: String,
         prompt: String,
+        attachment_ids: Vec<String>,
         command_id: Option<String>,
     ) -> Result<()> {
         // Sending during a run queues rather than failing (F1.7). The harness pulls the
@@ -441,7 +499,10 @@ impl Core {
                 .unwrap()
                 .entry(session_id)
                 .or_default()
-                .push_back(prompt);
+                .push_back(QueuedPrompt {
+                    text: prompt,
+                    attachment_ids,
+                });
             return Ok(());
         }
 
@@ -452,7 +513,7 @@ impl Core {
         let user_entry = self.store.append_entry(
             &session_id,
             EntryKind::Message {
-                message: Message::User(UserMessage::text(prompt.clone())),
+                message: Message::User(self.user_message(&prompt, &attachment_ids)),
             },
         )?;
         self.emit(
@@ -537,8 +598,8 @@ impl Core {
                 .lock()
                 .ok()
                 .and_then(|mut q| q.get_mut(&session_id).and_then(|q| q.pop_front()));
-            if let (Some(prompt), Some(core)) = (stranded, me.upgrade()) {
-                let _ = core.start_run(session_id, prompt, None);
+            if let (Some(queued), Some(core)) = (stranded, me.upgrade()) {
+                let _ = core.start_run(session_id, queued.text, queued.attachment_ids, None);
             }
         });
 
@@ -574,11 +635,14 @@ impl RunContext for CoreRunContext {
     }
 
     fn take_queued_prompt(&self) -> Option<String> {
+        // The harness only injects text; attachments on a queued prompt are carried by the
+        // run that the stranded-prompt path starts, not by mid-run injection.
         self.queued
             .lock()
             .ok()?
             .get_mut(&self.session_id)
             .and_then(|q| q.pop_front())
+            .map(|p| p.text)
     }
 
     fn prompt_overhead_tokens(&self) -> Option<u64> {

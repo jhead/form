@@ -97,7 +97,7 @@ struct CostTab: View {
                     .tabularFigures()
                     .foregroundStyle(theme.color.textPrimary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    .fixedSize()
                 Text(caption)
                     .typeStyle(theme.typography.micro)
                     .foregroundStyle(theme.color.textTertiary)
@@ -128,7 +128,7 @@ struct CostTab: View {
                         .tabularFigures()
                         .foregroundStyle(theme.color.textPrimary)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+                        .fixedSize()
                 }
                 Text("14-day average × 30")
                     .typeStyle(theme.typography.micro)

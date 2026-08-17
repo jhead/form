@@ -249,6 +249,13 @@ pub enum Command {
     RemoveAttachment {
         attachment_id: String,
     },
+    /// Record the thumbnail the host rendered. Thumbnailing needs platform image APIs, so it
+    /// stays in the app layer — but the *path* belongs in the store, or a second client on
+    /// another platform has no way to find what was already rendered.
+    SetAttachmentThumbnail {
+        attachment_id: String,
+        path: String,
+    },
     BranchFromMessage {
         session_id: String,
         entry_id: String,

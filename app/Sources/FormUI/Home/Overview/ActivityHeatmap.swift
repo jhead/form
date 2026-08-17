@@ -21,13 +21,17 @@ struct ActivityHeatmap: View {
         VStack(alignment: .leading, spacing: theme.metrics.spacing.md) {
             HStack(alignment: .top, spacing: metrics.heatmapGap) {
                 weekdayLabels
-                ScrollView(.horizontal, showsIndicators: false) {
+                // As many weeks as the card can hold, most recent last. A scroller would
+                // hide history behind a gesture; dropping the oldest weeks keeps the
+                // calendar readable at any window width and at any history length.
+                GeometryReader { geometry in
+                    let visible = columns.suffix(capacity(for: geometry.size.width))
                     VStack(alignment: .leading, spacing: metrics.heatmapGap) {
-                        monthLabels
-                        grid
+                        monthLabels(Array(visible))
+                        grid(Array(visible))
                     }
                 }
-                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                .frame(height: gridHeight)
             }
 
             HStack(spacing: theme.metrics.spacing.md) {
@@ -45,7 +49,18 @@ struct ActivityHeatmap: View {
 
     private var columns: [HeatmapColumn] { HeatmapColumn.build(from: cells) }
 
-    private var grid: some View {
+    /// One month row, seven day rows, and the gaps between them.
+    private var gridHeight: CGFloat {
+        metrics.heatmapCell * 8 + metrics.heatmapGap * 7
+    }
+
+    private func capacity(for width: CGFloat) -> Int {
+        let pitch = metrics.heatmapCell + metrics.heatmapGap
+        guard pitch > 0 else { return columns.count }
+        return max(1, Int((width + metrics.heatmapGap) / pitch))
+    }
+
+    private func grid(_ columns: [HeatmapColumn]) -> some View {
         HStack(alignment: .top, spacing: metrics.heatmapGap) {
             ForEach(columns) { column in
                 VStack(spacing: metrics.heatmapGap) {
@@ -98,7 +113,7 @@ struct ActivityHeatmap: View {
         .frame(alignment: .trailing)
     }
 
-    private var monthLabels: some View {
+    private func monthLabels(_ columns: [HeatmapColumn]) -> some View {
         HStack(alignment: .bottom, spacing: metrics.heatmapGap) {
             ForEach(columns) { column in
                 Text(column.monthLabel ?? "")

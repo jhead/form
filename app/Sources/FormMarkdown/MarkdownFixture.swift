@@ -153,35 +153,58 @@ public enum MarkdownFixture {
             partial: true),
     ])
 
-    /// Just the code block, for the line-numbers and soft-wrap previews.
+    /// Just the code blocks, for the line-numbers and soft-wrap previews.
     public static let codeOnly = doc([rustBlock, longLineBlock])
+
+    /// A table with all three column alignments and zebra rows.
+    public static let tableOnly = doc(
+        everything.blocks.compactMap { block in
+            if case .table = block.kind { return block.kind }
+            return nil
+        })
+
+    /// Quotes, a rule, and lists nested three deep — including one whose item carries a code
+    /// block, which is the case that renders natively instead of inside a text run.
+    public static let quotesAndLists = doc(
+        everything.blocks.compactMap { block in
+            switch block.kind {
+            case .quote, .rule, .list: return block.kind
+            default: return nil
+            }
+        })
+
+    /// Remote and local images, to check the reserved placeholder space.
+    public static let imagesOnly = doc(
+        everything.blocks.compactMap { block in
+            if case .image = block.kind { return block.kind }
+            return nil
+        })
 
     // MARK: Pieces
 
-    static let rustBlock: BlockKind = {
-        let code = """
-            async fn healthz() -> impl IntoResponse {
-                Json(json!({ "status": "ok" }))
-            }
+    public static let rustCode = """
+        async fn healthz() -> impl IntoResponse {
+            Json(json!({ "status": "ok" }))
+        }
 
-            """
-        return .codeBlock(
-            language: "rust", code: code,
-            tokens: tokens(
-                in: code,
-                [
-                    ("async", "keyword.control.rust"),
-                    ("fn", "storage.type.function.rust"),
-                    ("healthz", "entity.name.function.rust"),
-                    ("impl", "storage.modifier.rust"),
-                    ("IntoResponse", "entity.name.type.rust"),
-                    ("Json", "support.class.rust"),
-                    ("json!", "support.function.rust"),
-                    ("\"status\"", "string.quoted.double.rust"),
-                    ("\"ok\"", "string.quoted.double.rust"),
-                ]),
-            partial: false)
-    }()
+        """
+
+    public static let rustTokens = tokens(
+        in: rustCode,
+        [
+            ("async", "keyword.control.rust"),
+            ("fn", "storage.type.function.rust"),
+            ("healthz", "entity.name.function.rust"),
+            ("impl", "storage.modifier.rust"),
+            ("IntoResponse", "entity.name.type.rust"),
+            ("Json", "support.class.rust"),
+            ("json!", "support.function.rust"),
+            ("\"status\"", "string.quoted.double.rust"),
+            ("\"ok\"", "string.quoted.double.rust"),
+        ])
+
+    static let rustBlock: BlockKind = .codeBlock(
+        language: "rust", code: rustCode, tokens: rustTokens, partial: false)
 
     static let longLineBlock: BlockKind = .codeBlock(
         language: "sh",
@@ -209,7 +232,12 @@ public enum MarkdownFixture {
     }
 
     private static func fingerprint(_ kind: BlockKind) -> String {
-        let data = (try? JSONEncoder().encode(kind)) ?? Data()
+        // `.sortedKeys` is load-bearing: without it the encoder's key order is not stable
+        // between calls, and an id that changes on its own would defeat the very identity
+        // guarantee this fixture exists to reproduce.
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let data = (try? encoder.encode(kind)) ?? Data()
         var hash: UInt64 = 0xcbf2_9ce4_8422_2325
         for byte in data {
             hash ^= UInt64(byte)
@@ -221,7 +249,7 @@ public enum MarkdownFixture {
     /// Locates the fixture's highlight ranges by search rather than by hand-counted offsets —
     /// the point of the fixture is the *ranges being right*, and hand-counting UTF-16 is how
     /// they end up wrong.
-    private static func tokens(in code: String, _ pairs: [(String, String)]) -> [CodeToken] {
+    static func tokens(in code: String, _ pairs: [(String, String)]) -> [CodeToken] {
         let text = code as NSString
         var found: [CodeToken] = []
         for (needle, scope) in pairs {

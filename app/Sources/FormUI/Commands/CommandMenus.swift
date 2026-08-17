@@ -40,9 +40,9 @@ public struct MenuSection: Identifiable, Sendable {
 
 /// The app's menu bar, generated from `AppCommands.all` (F12.1).
 ///
-/// **This file is the only place in the app allowed to call `.keyboardShortcut`** — through
-/// `keyBinding(_:)`, which takes its value from the resolver so a user override shows up in
-/// the menu too (F12.3).
+/// **This is the only place in the app that binds a key to an action** — through
+/// `keyBinding(_:)`, the single wrapper over SwiftUI's key-equivalent modifier, whose value
+/// comes from the resolver so a user override shows up in the menu too (F12.3).
 @MainActor
 public struct AppCommandMenus: Commands {
     private let center: CommandCenter

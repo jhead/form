@@ -118,3 +118,22 @@ struct CodeBlockView: View {
         didCopy = true
     }
 }
+
+#Preview("code blocks — plain, numbered, wrapped") {
+    ThemePreview {
+        MarkdownView(doc: MarkdownFixture.codeOnly)
+        MarkdownView(
+            doc: MarkdownFixture.codeOnly, style: MarkdownStyle(showLineNumbers: true))
+        MarkdownView(
+            doc: MarkdownFixture.codeOnly,
+            style: MarkdownStyle(showLineNumbers: true, wrapCode: true))
+    }
+    .frame(width: 820)
+}
+
+#Preview("code block — still streaming") {
+    ThemePreview {
+        MarkdownView(doc: MarkdownFixture.streamingTail)
+    }
+    .frame(width: 820)
+}

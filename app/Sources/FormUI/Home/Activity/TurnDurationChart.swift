@@ -36,7 +36,7 @@ struct TurnDurationChart: View {
                 RuleMark(y: .value("Average", Double(averageMs)))
                     .lineStyle(StrokeStyle(lineWidth: theme.metrics.hairline * 2, dash: [4, 3]))
                     .foregroundStyle(theme.color.chartAxis)
-                    .annotation(position: .top, alignment: .trailing) {
+                    .annotation(position: .top, alignment: .leading) {
                         Text("avg \(StatsFormat.duration(ms: averageMs))")
                             .typeStyle(theme.typography.micro)
                             .foregroundStyle(theme.color.textTertiary)

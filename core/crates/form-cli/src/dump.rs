@@ -389,6 +389,10 @@ pub fn commands() -> Vec<Command> {
         Command::RemoveAttachment {
             attachment_id: ATTACHMENT.to_string(),
         },
+        Command::SetAttachmentThumbnail {
+            attachment_id: ATTACHMENT.to_string(),
+            path: "/Users/x/Library/Application Support/form/thumbnails/abc123.png".to_string(),
+        },
         Command::BranchFromMessage {
             session_id: SESSION.to_string(),
             entry_id: ENTRY.to_string(),

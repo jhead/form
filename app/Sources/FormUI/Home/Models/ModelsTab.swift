@@ -54,10 +54,7 @@ struct ModelsTab: View {
                 emptyTitle: "Nothing to tabulate yet",
                 emptyMessage: "Model rows appear once a run reports usage."
             ) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    ModelTable(models: stats.models, metrics: metrics)
-                }
-                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                ModelTable(models: stats.models, metrics: metrics)
             }
 
             HStack(alignment: .top, spacing: theme.metrics.spacing.xl) {

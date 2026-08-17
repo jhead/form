@@ -99,3 +99,10 @@ struct MarkdownImageView: View {
         return NSImage(contentsOf: parsed)
     }
 }
+
+#Preview("images reserve their space") {
+    ThemePreview {
+        MarkdownView(doc: MarkdownFixture.imagesOnly)
+    }
+    .frame(width: 900)
+}

@@ -140,29 +140,32 @@ public struct KeyBinding: Sendable, Hashable, Codable, CustomStringConvertible {
         var modifiers: KeyModifiers = []
         var remainder = trimmed
 
-        // Token form first: `+` only separates when it is not the key itself, which is why
-        // the last component is never treated as a modifier.
-        if trimmed.contains("+"), trimmed.count > 1 {
-            var parts = trimmed.components(separatedBy: "+")
-            // "cmd++" — a trailing empty component means the key is literally `+`.
-            if parts.last?.isEmpty == true {
-                parts.removeLast()
-                parts.append("+")
-            }
-            if parts.count > 1 {
-                let last = parts.removeLast()
-                var parsedAll = true
-                for part in parts {
-                    guard let modifier = KeyModifiers.parse(token: part) else {
-                        parsedAll = false
-                        break
-                    }
-                    modifiers.insert(modifier)
-                }
-                if parsedAll {
-                    remainder = last
+        // Token form. `+` is both the separator and a legal key, so a trailing `+` is read
+        // as the key and everything before it as modifiers — that is what makes "cmd++"
+        // (the serialized form of `⌘+`) round-trip.
+        if trimmed.count > 1, trimmed.contains("+") {
+            var tokens: [String]
+            var keyPart: String?
+            if trimmed.hasSuffix("+") {
+                keyPart = "+"
+                tokens = String(trimmed.dropLast()).components(separatedBy: "+")
+                    .filter { !$0.isEmpty }
+            } else {
+                var parts = trimmed.components(separatedBy: "+").filter { !$0.isEmpty }
+                if parts.count > 1 {
+                    keyPart = parts.removeLast()
+                    tokens = parts
                 } else {
-                    modifiers = []
+                    tokens = []
+                }
+            }
+            if let keyPart, !tokens.isEmpty {
+                let parsed = tokens.compactMap(KeyModifiers.parse(token:))
+                // All-or-nothing: a stray token means this was not token form after all, so
+                // fall through and let the glyph reader have it.
+                if parsed.count == tokens.count {
+                    modifiers = parsed.reduce(into: []) { $0.insert($1) }
+                    remainder = keyPart
                 }
             }
         }

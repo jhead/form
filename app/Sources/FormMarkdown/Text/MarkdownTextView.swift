@@ -95,10 +95,47 @@ struct MarkdownTextRun: NSViewRepresentable {
         // Identical content arrives on every streaming tick for every run but the last;
         // replacing the storage would drop the user's selection, so compare first.
         if view.contentKey != contentKey {
-            view.textStorage?.setAttributedString(rendered.attributed)
+            if let storage = view.textStorage { Self.update(storage, to: rendered.attributed) }
             view.contentKey = contentKey
         }
         view.rendered = rendered
+    }
+
+    /// Replaces only the tail of the storage that actually changed.
+    ///
+    /// This is the difference between a streaming response costing a few hundred
+    /// microseconds a tick and costing twenty milliseconds: `setAttributedString` invalidates
+    /// the whole run, so TextKit re-lays-out every paragraph above the caret on every token.
+    /// A prose answer coalesces into one text run, which is exactly the case where that
+    /// becomes quadratic.
+    static func update(_ storage: NSTextStorage, to next: NSAttributedString) {
+        let old = storage.string
+        let new = next.string
+        guard !old.isEmpty else {
+            storage.setAttributedString(next)
+            return
+        }
+
+        var cut = old.commonPrefix(with: new).utf16.count
+        // Back up two paragraph boundaries. One because the changed text starts inside its
+        // paragraph; a second because appending a block changes the *previous* block's
+        // trailing paragraph spacing, which a plain-text prefix comparison cannot see.
+        let oldNS = old as NSString
+        cut = min(cut, oldNS.length)
+        for _ in 0 ..< 2 where cut > 0 {
+            cut = oldNS.paragraphRange(for: NSRange(location: max(0, cut - 1), length: 0)).location
+        }
+
+        guard cut > 0 else {
+            storage.setAttributedString(next)
+            return
+        }
+        storage.beginEditing()
+        storage.replaceCharacters(
+            in: NSRange(location: cut, length: oldNS.length - cut),
+            with: next.attributedSubstring(
+                from: NSRange(location: cut, length: (new as NSString).length - cut)))
+        storage.endEditing()
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {

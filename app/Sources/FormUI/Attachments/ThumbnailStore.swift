@@ -19,12 +19,14 @@ import UniformTypeIdentifiers
 public final class ThumbnailStore {
     public static let shared = ThumbnailStore()
 
-    /// 128 pt at 2×, per spec 13.
-    public static let pointSize: CGFloat = 128
-    static let pixelSize = 256
+    /// 128 pt at 2×, per spec 13. `nonisolated` because the renderer runs off this actor.
+    public nonisolated static let pointSize: CGFloat = 128
+    nonisolated static let pixelSize = 256
 
     private var images: [String: NSImage] = [:]
-    private var inFlight: [String: Task<NSImage?, Never>] = [:]
+    /// Keyed by hash. The shared task yields PNG *bytes*, not an `NSImage`: `NSImage` is not
+    /// `Sendable`, and the one that ends up cached must be built on this actor anyway.
+    private var inFlight: [String: Task<Data?, Never>] = [:]
     private var directory: URL = ThumbnailStore.fallbackDirectory
 
     public init() {}
@@ -46,19 +48,24 @@ public final class ThumbnailStore {
     /// tray of six chips for the same file rasterizes once.
     public func thumbnail(sha256: String, source: AttachmentSource) async -> NSImage? {
         if let hit = images[sha256] { return hit }
-        if let task = inFlight[sha256] { return await task.value }
 
-        let file = directory.appending(path: "\(sha256).png")
-        let task = Task<NSImage?, Never> { [directory] in
-            let data = await Task.detached(priority: .utility) {
-                ThumbnailRenderer.load(cache: file) ?? ThumbnailRenderer.render(source, cache: file, in: directory)
-            }.value
-            return data.flatMap { NSImage(data: $0) }
+        let task: Task<Data?, Never>
+        if let existing = inFlight[sha256] {
+            task = existing
+        } else {
+            let file = directory.appending(path: "\(sha256).png")
+            let directory = directory
+            task = Task.detached(priority: .utility) {
+                ThumbnailRenderer.load(cache: file)
+                    ?? ThumbnailRenderer.render(source, cache: file, in: directory)
+            }
+            inFlight[sha256] = task
         }
-        inFlight[sha256] = task
-        let image = await task.value
+
+        let data = await task.value
         inFlight[sha256] = nil
-        if let image { images[sha256] = image }
+        guard let data, let image = NSImage(data: data) else { return nil }
+        images[sha256] = image
         return image
     }
 

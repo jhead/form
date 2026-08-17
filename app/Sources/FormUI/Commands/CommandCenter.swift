@@ -27,8 +27,26 @@ public final class CommandCenter {
     public let state: any CommandAppState
     public let resolver: ShortcutResolver
     public let escapeChain = EscapeResponderChain()
-    public private(set) var palette: PaletteModel!
-    public private(set) var find: FindController!
+
+    // Built on first use rather than in `init`: both hold the centre, and a stored property
+    // cannot reference `self` before every stored property exists. They are created exactly
+    // once and never replaced, so callers can hold onto them.
+    @ObservationIgnored private var storedPalette: PaletteModel?
+    @ObservationIgnored private var storedFind: FindController?
+
+    public var palette: PaletteModel {
+        if let storedPalette { return storedPalette }
+        let model = PaletteModel(center: self)
+        storedPalette = model
+        return model
+    }
+
+    public var find: FindController {
+        if let storedFind { return storedFind }
+        let controller = FindController(center: self)
+        storedFind = controller
+        return controller
+    }
 
     /// Filled in by W10/W13 at startup — see `CommandHooks`.
     public var hooks = CommandHooks()
@@ -52,8 +70,6 @@ public final class CommandCenter {
         self.state = state
         resolver = ShortcutResolver(
             commands: commands, overrides: stores.settings.settings.shortcuts ?? [:])
-        palette = PaletteModel(center: self)
-        find = FindController(center: self)
         registerBuiltInEscapeResponders()
     }
 

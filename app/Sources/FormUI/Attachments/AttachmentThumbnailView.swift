@@ -43,8 +43,11 @@ struct AttachmentThumbnailView: View {
                 .strokeBorder(theme.color.border, lineWidth: theme.metrics.hairline * 2)
         )
         .task(id: sha256) {
-            image = store.cached(sha256: sha256)
-                ?? await store.thumbnail(sha256: sha256, source: source)
+            if let hit = store.cached(sha256: sha256) {
+                image = hit
+            } else {
+                image = await store.thumbnail(sha256: sha256, source: source)
+            }
         }
         .accessibilityHidden(true)
     }

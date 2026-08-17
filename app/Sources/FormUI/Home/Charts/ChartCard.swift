@@ -95,7 +95,7 @@ struct SparseValue: View {
 
 #Preview("ChartCard states") {
     HomePreviewStage {
-        VStack(spacing: 16) {
+        VStack {
             ChartCard(
                 title: "Tokens over time", subtitle: "Last 30 days",
                 legend: ChartSeries.tokenSeries.map { ChartLegendItem($0) },

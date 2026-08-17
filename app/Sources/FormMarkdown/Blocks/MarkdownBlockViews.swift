@@ -101,3 +101,10 @@ struct MarkdownFootnoteView: View {
         }
     }
 }
+
+#Preview("quotes, rules and nested lists") {
+    ThemePreview {
+        MarkdownView(doc: MarkdownFixture.quotesAndLists)
+    }
+    .frame(width: 900)
+}

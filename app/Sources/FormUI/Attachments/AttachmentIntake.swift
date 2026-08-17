@@ -33,6 +33,10 @@ public final class AttachmentIntake {
     public init(stores: CoreStores, thumbnails: ThumbnailStore = .shared) {
         self.stores = stores
         self.thumbnails = thumbnails
+        // The core stamps the real data directory on the settings document; pointing the
+        // thumbnail cache at `{dataDir}/thumbnails` here means no other workstream has to
+        // remember to (spec 13, Part B).
+        thumbnails.configure(dataDir: stores.settings.settings.dataDir)
     }
 
     // MARK: - Derived
@@ -133,7 +137,8 @@ public final class AttachmentIntake {
         Task { await ingest(source) }
     }
 
-    private func ingest(_ source: AttachmentSource) async {
+    /// The common path, `internal` so tests can await the work `add(_:)` fires and forgets.
+    func ingest(_ source: AttachmentSource) async {
         let probe: AttachmentReader.Probe
         do {
             probe = try await Task.detached(priority: .userInitiated) {

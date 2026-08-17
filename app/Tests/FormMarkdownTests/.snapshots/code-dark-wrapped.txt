@@ -1,0 +1,22 @@
+theme: dark
+code(language: rust, lines: 3, partial: false)
+  "async"  color=#E091C0
+  " "  color=#F5F3EF
+  "fn"  color=#6FC9C2
+  " "  color=#F5F3EF
+  "healthz"  color=#7FB6E8
+  "() -> "  color=#F5F3EF
+  "impl"  color=#E091C0
+  " "  color=#F5F3EF
+  "IntoResponse"  color=#6FC9C2
+  " {\n    "  color=#F5F3EF
+  "Json"  color=#6FC9C2
+  "("  color=#F5F3EF
+  "json!"  color=#7FB6E8
+  "({ "  color=#F5F3EF
+  ""status""  color=#8FCF9E
+  ": "  color=#F5F3EF
+  ""ok""  color=#8FCF9E
+  " }))\n}\n"  color=#F5F3EF
+code(language: sh, lines: 1, partial: false)
+  "curl -sS https://example.com/a/very/long/path/that/keeps/going/and/going/and/going/and/going?query=1&and=2&more=3 | jq '.data[] | {id, name}'\n"  color=#F5F3EF

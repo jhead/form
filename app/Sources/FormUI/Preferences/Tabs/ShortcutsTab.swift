@@ -63,7 +63,7 @@ struct ShortcutsTab: View {
     /// fire; saying so here is what turns a silent loss into a visible conflict.
     private func conflictHelp(for command: AppCommand, displaced: [KeyBinding]) -> String? {
         guard let lost = displaced.first else { return nil }
-        guard let winner = resolver.command(bound: lost), winner.id != command.id else {
+        guard let winner = resolver.command(boundTo: lost), winner.id != command.id else {
             return "\(lost.display) is taken."
         }
         return "\(lost.display) is used by “\(winner.title)”."

@@ -17,7 +17,8 @@ public struct MarkdownStyle: Sendable, Equatable {
     public var codeFontSize: CGFloat?
     /// Suppressed for a code block that is still streaming, and for compact contexts.
     public var showsCopyButton: Bool
-    /// Off falls back to plain SwiftUI `Text`, which is cheaper and cannot be selected.
+    /// Off leaves the text run non-selectable — a user bubble already has its own copy
+    /// action, and a selection inside it competes with dragging the message.
     public var isSelectable: Bool
 
     public static let `default` = MarkdownStyle()

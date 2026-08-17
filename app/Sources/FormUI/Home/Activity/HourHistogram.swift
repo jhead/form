@@ -88,12 +88,12 @@ struct WeekdayHourMatrix: View {
                 HStack(spacing: metrics.heatmapGap) {
                     Spacer().frame(width: metrics.rankLabelWidth / 3)
                     ForEach(0 ..< 24, id: \.self) { hour in
-                        Text(hour.isMultiple(of: 6) ? StatsFormat.hourShort(hour) : "")
+                        Text(hour.isMultiple(of: 3) ? StatsFormat.hourShort(hour) : "")
                             .typeStyle(theme.typography.micro)
                             .tabularFigures()
                             .foregroundStyle(theme.color.textTertiary)
-                            .frame(width: metrics.matrixCell, alignment: .leading)
-                            .fixedSize()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .lineLimit(1)
                     }
                 }
             }
@@ -105,12 +105,15 @@ struct WeekdayHourMatrix: View {
         }
     }
 
+    /// Cells stretch to fill the card — 24 columns across a full-width panel read better as
+    /// a band than as a postage stamp pinned to the leading edge.
     private func cell(weekday: Int, hour: Int, tokens: Int64) -> some View {
         let shape = RoundedRectangle(cornerRadius: theme.metrics.radius.sm / 2, style: .continuous)
         let cell = MatrixCell(weekday: weekday, hour: hour, tokens: tokens)
         return shape
             .fill(theme.color.heatmap(intensity(tokens)))
-            .frame(width: metrics.matrixCell, height: metrics.matrixCell)
+            .frame(maxWidth: .infinity)
+            .frame(height: metrics.matrixCell)
             .overlay {
                 if hovered == cell {
                     shape.strokeBorder(theme.color.borderStrong, lineWidth: theme.metrics.hairline * 2)

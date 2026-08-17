@@ -14,7 +14,9 @@ public struct FindMatch: Identifiable, Sendable, Equatable {
     public let ranges: [HighlightRange]
     public let timestamp: TimestampMs
 
-    public var id: String { "\(entryId ?? "title")#\(ranges.first?.start ?? 0)" }
+    /// Identity, not position: this is what the current match is re-anchored by when a
+    /// streaming update re-runs the search (spec 14 §6).
+    public var id: String { "\(sessionId)#\(entryId ?? "title")#\(ranges.first?.start ?? 0)" }
 
     init(hit: SearchHit) {
         sessionId = hit.sessionId

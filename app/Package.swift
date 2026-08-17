@@ -44,5 +44,6 @@ let package = Package(
         .testTarget(name: "FormCoreTests", dependencies: ["FormCore"]),
         .testTarget(name: "FormDesignTests", dependencies: ["FormDesign"]),
         .testTarget(name: "FormMarkdownTests", dependencies: ["FormMarkdown"]),
+        .testTarget(name: "FormUITests", dependencies: ["FormUI"]),
     ]
 )

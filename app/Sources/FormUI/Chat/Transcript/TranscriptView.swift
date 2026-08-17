@@ -98,16 +98,23 @@ struct TranscriptView: View {
     @ViewBuilder
     private func row(_ item: TranscriptItem, columnWidth: CGFloat) -> some View {
         switch item {
+        // `.equatable()` on both message rows is what makes a long transcript cheap to stream
+        // into: without it the action closures defeat SwiftUI's own comparison and every
+        // finished message re-renders on every delta of the one still arriving.
         case let .user(entry, message):
             UserMessageRow(
                 entry: entry, message: message, columnWidth: columnWidth,
-                onRetry: { retry(entry.id) }, onBranch: { branch(entry.id) })
+                onRetry: { retry(entry.id) }, onBranch: { branch(entry.id) }
+            )
+            .equatable()
 
         case let .assistant(entry, message, isStreaming):
             AssistantMessageRow(
                 entry: entry, message: message, isStreaming: isStreaming, effort: effort,
-                client: stores.client,
-                onRetry: { retry(entry.id) }, onBranch: { branch(entry.id) })
+                editor: stores.settings.settings.editor, client: stores.client,
+                onRetry: { retry(entry.id) }, onBranch: { branch(entry.id) }
+            )
+            .equatable()
 
         case let .tools(_, calls):
             ToolCallGroup(calls: calls)

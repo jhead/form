@@ -1,0 +1,121 @@
+theme: dark
+textRun(5 blocks)
+  "Markdown fixture\n"  font=17.0[bold]  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=8.0
+  "Body text with "  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "strong"  font=14.0[bold]  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  ", "  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "emphasis"  font=14.0[italic]  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  ", "  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "struck"  font=14.0  color=#F5F3EF  strike  indent=0.0/0.0 after=12.0 before=0.0
+  ", "  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "inline_code()"  font=13.0[mono]  color=#F5F3EF  chip=#262421  indent=0.0/0.0 after=12.0 before=0.0
+  ", a "  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "web link"  font=14.0  color=#D97757  link=https://example.com/docs  indent=0.0/0.0 after=12.0 before=0.0
+  ", "  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "mail"  font=14.0  color=#D97757  link=mailto:someone@example.com  indent=0.0/0.0 after=12.0 before=0.0
+  ", "  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "a file"  font=14.0  color=#D97757  link=file:///tmp/router.rs  indent=0.0/0.0 after=12.0 before=0.0
+  ", and a footnote"  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "note"  font=11.0  color=#D97757  superscript  indent=0.0/0.0 after=12.0 before=0.0
+  ".\nA hard break precedes this line; a soft one precedes this one.\njavascript:alert(1) arrives as text, never as a link.\n"  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "Lists\n"  font=15.0[bold]  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=8.0
+  "• "  font=14.0  color=#A8A39B  indent=0.0/0.0 after=2.0 before=0.0
+  "First bullet\n"  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=2.0 before=0.0
+  "• "  font=14.0  color=#A8A39B  indent=0.0/0.0 after=2.0 before=0.0
+  "Second, with a nested list\n"  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=2.0 before=0.0
+  "◦ "  font=14.0  color=#A8A39B  indent=20.0/40.0 after=2.0 before=0.0
+  "Depth one\n"  font=14.0  color=#F5F3EF  indent=20.0/40.0 after=2.0 before=0.0
+  "◦ "  font=14.0  color=#A8A39B  indent=20.0/40.0 after=2.0 before=0.0
+  "Depth two\n"  font=14.0  color=#F5F3EF  indent=20.0/40.0 after=2.0 before=0.0
+  "▪ "  font=14.0  color=#A8A39B  indent=40.0/60.0 after=2.0 before=0.0
+  "Depth three\n"  font=14.0  color=#F5F3EF  indent=40.0/60.0 after=2.0 before=0.0
+  "• ☑ "  font=14.0  color=#A8A39B  indent=0.0/0.0 after=2.0 before=0.0
+  "Done\n"  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=2.0 before=0.0
+  "• ☐ "  font=14.0  color=#A8A39B  indent=0.0/0.0 after=0.0 before=0.0
+  "Not done"  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=0.0 before=0.0
+  source: "# Markdown fixture\n\nBody text with **strong**, *emphasis*, ~~struck~~, `inline_code()`, a [web link](https://example.com/docs "The docs"), [mail](mailto:someone@example.com), [a file](file:///tmp/router.rs), and a footnote[^note].  \nA hard break precedes this line;\na soft one precedes this one.\n\njavascript:alert(1) arrives as text, never as a link.\n\n## Lists\n\n- First bullet\n- Second, with a nested list\n  - Depth one\n  - Depth two\n    - Depth three\n- [x] Done\n- [ ] Not done"
+list(ordered: true, start: 3, tight: false)
+  item(checked: -)
+    textRun(1 blocks)
+      "Numbering starts at three"  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=0.0 before=0.0
+      source: "Numbering starts at three"
+  item(checked: -)
+    textRun(1 blocks)
+      "An item carrying a code block"  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=0.0 before=0.0
+      source: "An item carrying a code block"
+    code(language: rust, lines: 3, partial: false)
+      "async"  color=#E091C0
+      " "  color=#F5F3EF
+      "fn"  color=#6FC9C2
+      " "  color=#F5F3EF
+      "healthz"  color=#7FB6E8
+      "() -> "  color=#F5F3EF
+      "impl"  color=#E091C0
+      " "  color=#F5F3EF
+      "IntoResponse"  color=#6FC9C2
+      " {\n    "  color=#F5F3EF
+      "Json"  color=#6FC9C2
+      "("  color=#F5F3EF
+      "json!"  color=#7FB6E8
+      "({ "  color=#F5F3EF
+      ""status""  color=#8FCF9E
+      ": "  color=#F5F3EF
+      ""ok""  color=#8FCF9E
+      " }))\n}\n"  color=#F5F3EF
+textRun(1 blocks)
+  "Quotes"  font=14.0[bold]  color=#F5F3EF  indent=0.0/0.0 after=0.0 before=8.0
+  source: "### Quotes"
+quote(rule: 2.0, inset: 12.0)
+  textRun(1 blocks)
+    "A quote renders secondary, with a rule."  font=14.0  color=#A8A39B  indent=0.0/0.0 after=0.0 before=0.0
+    source: "A quote renders secondary, with a rule."
+  quote(rule: 2.0, inset: 12.0)
+    textRun(1 blocks)
+      "And quotes nest."  font=14.0  color=#A8A39B  indent=0.0/0.0 after=0.0 before=0.0
+      source: "And quotes nest."
+textRun(1 blocks)
+  "Code"  font=13.0[bold]  color=#F5F3EF  indent=0.0/0.0 after=0.0 before=8.0
+  source: "#### Code"
+code(language: rust, lines: 3, partial: false)
+  "async"  color=#E091C0
+  " "  color=#F5F3EF
+  "fn"  color=#6FC9C2
+  " "  color=#F5F3EF
+  "healthz"  color=#7FB6E8
+  "() -> "  color=#F5F3EF
+  "impl"  color=#E091C0
+  " "  color=#F5F3EF
+  "IntoResponse"  color=#6FC9C2
+  " {\n    "  color=#F5F3EF
+  "Json"  color=#6FC9C2
+  "("  color=#F5F3EF
+  "json!"  color=#7FB6E8
+  "({ "  color=#F5F3EF
+  ""status""  color=#8FCF9E
+  ": "  color=#F5F3EF
+  ""ok""  color=#8FCF9E
+  " }))\n}\n"  color=#F5F3EF
+code(language: -, lines: 1, partial: false)
+  "no language, no tokens\n"  color=#F5F3EF
+textRun(1 blocks)
+  "Tables"  font=12.0[bold]  color=#F5F3EF  indent=0.0/0.0 after=0.0 before=8.0
+  source: "##### Tables"
+table(align: left,center,right)
+  header: Language | Status | Tokens
+  row[0] -: rust | shipped | 1,204
+  row[1] zebra: swift | in progress | 986
+  row[2] -: typescript | queued | 12
+textRun(1 blocks)
+  "Everything else"  font=11.0[bold]  color=#F5F3EF  indent=0.0/0.0 after=0.0 before=8.0
+  source: "###### Everything else"
+rule
+image(url: https://example.com/diagram.png, alt: An architecture diagram, title: Diagram, reserved: 400.0)
+image(url: file:///tmp/screenshot.png, alt: A local screenshot, title: -, reserved: 400.0)
+textRun(3 blocks)
+  "<div class="callout">raw html is shown, never interpreted</div>\n"  font=12.5[mono]  color=#A8A39B  indent=0.0/0.0 after=12.0 before=0.0
+  "Unicode: 🚀 emoji, 日本語 text, and "  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "let 変数 = "🎯""  font=13.0[mono]  color=#F5F3EF  chip=#262421  indent=0.0/0.0 after=12.0 before=0.0
+  " inline.\n"  font=14.0  color=#F5F3EF  indent=0.0/0.0 after=12.0 before=0.0
+  "note. "  font=12.0  color=#736E66  indent=0.0/0.0 after=2.0 before=0.0
+  "The footnote body."  font=14.0  color=#F5F3EF  indent=20.0/40.0 after=0.0 before=0.0
+  source: "<div class="callout">raw html is shown, never interpreted</div>\n\nUnicode: 🚀 emoji, 日本語 text, and `let 変数 = "🎯"` inline.\n\n[^note]:   The footnote body."

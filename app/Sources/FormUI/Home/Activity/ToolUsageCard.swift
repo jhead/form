@@ -12,6 +12,11 @@ struct ToolUsageCard: View {
     let tools: [ToolStat]
     var metrics: HomeMetrics = .standard
 
+    /// Ranked here rather than trusted from the document: the core sorts by invocations,
+    /// but a card titled "most-invoked" must not depend on that promise. Ordering is
+    /// presentation — no number is recomputed.
+    private var ranked: [ToolStat] { tools.sorted { $0.invocations > $1.invocations } }
+
     var body: some View {
         VStack(alignment: .leading, spacing: theme.metrics.spacing.lg) {
             RankedBarChart(rows: rows, format: .count, metrics: metrics)
@@ -19,7 +24,7 @@ struct ToolUsageCard: View {
             FormDivider()
 
             VStack(spacing: 0) {
-                ForEach(Array(tools.enumerated()), id: \.element.id) { index, tool in
+                ForEach(Array(ranked.enumerated()), id: \.element.id) { index, tool in
                     HStack(spacing: theme.metrics.spacing.md) {
                         RoundedRectangle(cornerRadius: theme.metrics.radius.sm, style: .continuous)
                             .fill(theme.color.series(index))
@@ -49,7 +54,7 @@ struct ToolUsageCard: View {
     }
 
     private var rows: [RankedBarRow] {
-        tools.enumerated().map { index, tool in
+        ranked.enumerated().map { index, tool in
             RankedBarRow(
                 id: tool.id, label: tool.name, value: Double(tool.invocations), colorIndex: index,
                 detail: StatsFormat.grouped(tool.invocations))

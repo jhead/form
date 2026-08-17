@@ -5,7 +5,7 @@ import FormDesign
 
 /// A sent prompt: right-aligned, filled, capped at 72 % of the column (F1.2, spec 08 §1).
 /// Attachments ride above the text as thumbnail chips (F3.5).
-struct UserMessageRow: View {
+struct UserMessageRow: View, Equatable {
     @Environment(\.theme) private var theme
 
     let entry: Entry
@@ -33,6 +33,12 @@ struct UserMessageRow: View {
         .onHover { isHovering = $0 }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("You said")
+    }
+
+    /// See `AssistantMessageRow.==`: closures are never equal, so without this every bubble
+    /// re-renders on every delta of the message being streamed.
+    nonisolated static func == (a: UserMessageRow, b: UserMessageRow) -> Bool {
+        a.entry.id == b.entry.id && a.columnWidth == b.columnWidth && a.message == b.message
     }
 
     private var bubble: some View {
