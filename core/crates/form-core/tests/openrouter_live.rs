@@ -336,3 +336,122 @@ fn has_key_reflects_a_key_supplied_through_the_environment() {
         "the .env key should make openrouter resolvable, got {resolvable:?}"
     );
 }
+
+/// Print the streamed event shape, to compare delta application against the provider's own
+/// `partial`. This is a diagnostic, not an assertion.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore]
+async fn dump_event_shape() {
+    use form_core::app::TurnRecord;
+    use form_core::harness::{AbortSignal, Harness, RunContext, RunRequest};
+    use form_core::protocol::{now_ms, AssistantMessageEvent, Entry, EntryKind, EventKind};
+    use std::sync::{Arc, Mutex};
+
+    form_core::env::load(std::path::Path::new("."));
+
+    struct Probe {
+        lines: Mutex<Vec<String>>,
+        count: Mutex<usize>,
+    }
+    impl RunContext for Probe {
+        fn emit(&self, kind: EventKind) {
+            if let EventKind::MessageUpdate { event, .. } = &kind {
+                let (name, index) = match event {
+                    AssistantMessageEvent::Start { .. } => ("start", None),
+                    AssistantMessageEvent::TextStart { content_index, .. } => {
+                        ("text_start", Some(*content_index))
+                    }
+                    AssistantMessageEvent::TextDelta { content_index, .. } => {
+                        ("text_delta", Some(*content_index))
+                    }
+                    AssistantMessageEvent::TextEnd { content_index, .. } => {
+                        ("text_end", Some(*content_index))
+                    }
+                    AssistantMessageEvent::ThinkingStart { content_index, .. } => {
+                        ("thinking_start", Some(*content_index))
+                    }
+                    AssistantMessageEvent::ThinkingDelta { content_index, .. } => {
+                        ("thinking_delta", Some(*content_index))
+                    }
+                    AssistantMessageEvent::ThinkingEnd { content_index, .. } => {
+                        ("thinking_end", Some(*content_index))
+                    }
+                    AssistantMessageEvent::ToolCallStart { content_index, .. } => {
+                        ("toolcall_start", Some(*content_index))
+                    }
+                    AssistantMessageEvent::ToolCallDelta { content_index, .. } => {
+                        ("toolcall_delta", Some(*content_index))
+                    }
+                    AssistantMessageEvent::ToolCallEnd { content_index, .. } => {
+                        ("toolcall_end", Some(*content_index))
+                    }
+                    AssistantMessageEvent::Done { .. } => ("done", None),
+                    AssistantMessageEvent::Error { .. } => ("error", None),
+                };
+                let shape: Vec<&str> = event
+                    .partial()
+                    .map(|p| {
+                        p.content
+                            .iter()
+                            .map(|c| match c {
+                                form_core::protocol::AssistantContent::Text(_) => "text",
+                                form_core::protocol::AssistantContent::Thinking(_) => "thinking",
+                                form_core::protocol::AssistantContent::ToolCall(_) => "toolCall",
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let mut lines = self.lines.lock().unwrap();
+                let line = format!("{name} idx={index:?} partial={shape:?}");
+                if lines.last().map(|l| l != &line).unwrap_or(true) {
+                    lines.push(line);
+                }
+            }
+        }
+        fn append_entry(&self, session_id: &str, kind: EntryKind) -> Option<Entry> {
+            let mut count = self.count.lock().unwrap();
+            *count += 1;
+            Some(Entry {
+                id: format!("ent_{count}"),
+                session_id: session_id.to_string(),
+                seq: *count as u64,
+                parent_id: None,
+                timestamp: now_ms(),
+                kind,
+            })
+        }
+        fn replace_entry(&self, _entry: &Entry) {}
+        fn speed(&self) -> f64 {
+            1.0
+        }
+        fn record_turn(&self, _turn: TurnRecord) {}
+    }
+
+    let harness = PiHarness::new("You are terse.".into())
+        .await
+        .expect("harness");
+    let probe = Arc::new(Probe {
+        lines: Mutex::new(Vec::new()),
+        count: Mutex::new(0),
+    });
+    let ctx: Arc<dyn RunContext> = probe.clone();
+    harness
+        .run(
+            RunRequest {
+                session_id: "ses_shape".into(),
+                run_id: "run_shape".into(),
+                command_id: None,
+                prompt: "Say hi in three words.".into(),
+                model: model(&test_model()),
+                workspace_root: None,
+                turn_index: 0,
+            },
+            ctx,
+            AbortSignal::new(),
+        )
+        .await;
+
+    for line in probe.lines.lock().unwrap().iter() {
+        println!("{line}");
+    }
+}

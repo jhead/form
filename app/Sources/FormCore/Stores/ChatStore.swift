@@ -340,35 +340,68 @@ public final class ChatStore {
         entries[index].kind = .message(message: .assistant(assistant))
     }
 
+    /// A one-line summary of a content tree: kind and text length per block.
+    static func describe(_ content: [AssistantContent]) -> String {
+        content
+            .map { block in
+                switch block {
+                case let .text(text): "text(\(text.text.count))"
+                case let .thinking(thinking): "thinking(\(thinking.thinking.count))"
+                case let .toolCall(call): "toolCall(\(call.name))"
+                case let .unknown(type, _): "unknown(\(type))"
+                }
+            }
+            .joined(separator: ", ")
+    }
+
     private func setAssistant(_ message: AssistantMessage, at index: Int) {
         entries[index].kind = .message(message: .assistant(message))
     }
 
-    /// Assert-and-repair. Debug compares the whole content tree; release compares block count
-    /// and the length of each block's text, which is cheap and catches every drift a delta
-    /// bug can produce.
+    /// Assert-and-repair.
+    ///
+    /// Drift means the *rendered* content disagrees: a different block count, kind, or text.
+    /// Provider metadata is deliberately not part of that comparison. A real provider stamps
+    /// fields onto a block that the delta stream never carries — `thinkingSignature` is the
+    /// one that shows up on every reasoning model — and the delta path has no way to know
+    /// them. Treating that as drift meant a live run asserted on its very first thinking
+    /// block while rendering perfectly, which is a broken alarm rather than a caught bug.
+    ///
+    /// So metadata is adopted from the core silently, and only a rendering difference counts.
     private func reconcile(at index: Int, against partial: AssistantMessage) {
         guard case let .message(message) = entries[index].kind,
             let local = message.asAssistant
         else { return }
 
-        #if DEBUG
-            let drifted = local.content != partial.content
-        #else
-            let drifted = Self.shapeDiffers(local.content, partial.content)
-        #endif
-        guard drifted else { return }
+        let drifted = Self.shapeDiffers(local.content, partial.content)
+
+        // Identical to render, different in metadata: take the core's version and move on.
+        if !drifted {
+            if local.content != partial.content {
+                setAssistant(partial, at: index)
+            }
+            return
+        }
 
         reconciliationRepairs += 1
+        // Naming the shapes matters: "it drifted" is not something anyone can act on, and
+        // the difference is almost always an ordering assumption, not a lost character.
+        let localShape = Self.describe(local.content)
+        let partialShape = Self.describe(partial.content)
         Log.stores.error(
             """
             transcript drifted from the core's partial at entry \
-            \(self.entries[index].id, privacy: .public); repairing
+            \(self.entries[index].id, privacy: .public); \
+            local=\(localShape, privacy: .public) core=\(partialShape, privacy: .public); repairing
             """)
         #if DEBUG
             assert(
                 !Self.assertsOnReconciliationDrift,
-                "ChatStore delta application disagrees with the core's `partial`")
+                """
+                ChatStore delta application disagrees with the core's `partial`
+                  local: \(localShape)
+                  core:  \(partialShape)
+                """)
         #endif
         setAssistant(partial, at: index)
     }
@@ -377,10 +410,10 @@ public final class ChatStore {
         guard a.count == b.count else { return true }
         for (x, y) in zip(a, b) {
             switch (x, y) {
-            case let (.text(p), .text(q)) where p.text.utf8.count == q.text.utf8.count: continue
-            case let (.thinking(p), .thinking(q))
-            where p.thinking.utf8.count == q.thinking.utf8.count:
-                continue
+            // Text is compared in full rather than by length: two strings of equal length
+            // that differ is exactly the delta bug this exists to catch.
+            case let (.text(p), .text(q)) where p.text == q.text: continue
+            case let (.thinking(p), .thinking(q)) where p.thinking == q.thinking: continue
             case let (.toolCall(p), .toolCall(q)) where p.id == q.id: continue
             default: return true
             }
