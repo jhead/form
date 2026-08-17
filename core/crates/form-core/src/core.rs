@@ -75,6 +75,12 @@ impl Core {
             .build()
             .map_err(|e| CoreError::Internal(format!("tokio runtime: {e}")))?;
 
+        // Loading the syntax set costs ~22 ms and is otherwise paid lazily by whichever
+        // parse first sees a fenced code block — which, during a live run, is a dropped
+        // frame in the middle of a streaming answer. Doing it on a blocking worker keeps it
+        // off both the first frame and startup itself.
+        runtime.spawn_blocking(markdown::warm);
+
         Ok(Arc::new_cyclic(|me| Self {
             me: me.clone(),
             config,

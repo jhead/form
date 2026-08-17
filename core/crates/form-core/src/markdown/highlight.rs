@@ -59,6 +59,15 @@ fn compute(language: Option<&str>, code: &str) -> Vec<CodeToken> {
     if matches!(language.as_str(), "diff" | "patch" | "udiff") {
         return diff(code);
     }
+    // Fences that explicitly ask for no language: the `Plain Text` grammar exists in the
+    // set and would emit nothing, so short-circuit to the same answer an unknown fence
+    // gets rather than paying for a parse that scopes nothing.
+    if matches!(
+        language.as_str(),
+        "text" | "plain" | "plaintext" | "txt" | "none" | "log" | "output" | "raw"
+    ) {
+        return plain(code);
+    }
     let set = syntaxes();
     let Some(syntax) = resolve(set, &language) else {
         return plain(code);
@@ -161,9 +170,14 @@ fn utf16_len(s: &str) -> u32 {
 /// `_newlines` because `ParseState` is fed lines with their terminators; the `_nonewlines`
 /// set silently mis-scopes multi-line constructs. Loading the dump is a one-time cost, so
 /// it stays behind a `OnceLock` and the app pays it before the first token arrives.
-pub(crate) fn syntaxes() -> &'static SyntaxSet {
+fn syntaxes() -> &'static SyntaxSet {
     static SET: OnceLock<SyntaxSet> = OnceLock::new();
     SET.get_or_init(two_face::syntax::extra_newlines)
+}
+
+/// Pay the dump's deserialization cost now instead of inside a frame. See [`super::warm`].
+pub(crate) fn warm() {
+    let _ = syntaxes();
 }
 
 fn resolve<'a>(set: &'a SyntaxSet, language: &str) -> Option<&'a SyntaxReference> {
@@ -175,32 +189,26 @@ fn resolve<'a>(set: &'a SyntaxSet, language: &str) -> Option<&'a SyntaxReference
     set.find_syntax_by_token(language)
 }
 
-/// Fence info strings are whatever the model felt like typing. Candidates are tried in
-/// order, so an alias can name a preferred grammar and then a graceful substitute — the
-/// default syntax set has no TypeScript, and JavaScript is much better than nothing.
+/// Fence info strings are whatever the model felt like typing.
+///
+/// `two-face`'s set resolves most of them on its own — `find_syntax_by_token` matches file
+/// extensions and then grammar names, both case-insensitively, so `ts`, `tsx`, `zsh`,
+/// `yml`, `c++`, `swift`, `toml` and the rest need no help. What is left here is only what
+/// the set genuinely does not know, with a graceful substitute where one exists (there is
+/// no JSX grammar, and plain JavaScript is much better than flat monospace).
+/// `language_aliases_resolve_to_a_grammar` is what keeps this honest.
 fn aliases(language: &str) -> &'static [&'static str] {
     match language {
-        "ts" | "typescript" | "mts" | "cts" => &["TypeScript", "js"],
-        "tsx" => &["TSX", "TypeScript", "js"],
-        "js" | "javascript" | "mjs" | "cjs" | "node" => &["js"],
-        "jsx" => &["jsx", "js"],
-        "sh" | "zsh" | "bash" | "shell" | "console" | "shell-session" | "ksh" => &["sh", "bash"],
-        "yml" | "yaml" => &["yaml"],
-        "objc" | "objective-c" | "obj-c" => &["m"],
-        "objcpp" | "objective-c++" => &["mm"],
-        "c++" | "cpp" | "cxx" | "cc" | "hpp" | "hxx" => &["cpp"],
-        "c#" | "csharp" => &["cs"],
-        "rust" => &["rs"],
-        "python" | "python3" | "py3" => &["py"],
-        "ruby" => &["rb"],
+        "jsx" | "mjs" | "cjs" | "node" | "es6" => &["js"],
+        "shell" | "console" | "shell-session" | "shellsession" | "ksh" => &["sh"],
+        "objc" | "obj-c" => &["objective-c"],
+        "objcpp" | "objc++" => &["objective-c++"],
+        "csharp" => &["cs"],
+        "python3" => &["py"],
         "golang" => &["go"],
-        "kotlin" => &["kt"],
-        "markdown" => &["md"],
         "jsonc" | "json5" => &["json"],
-        "htm" => &["html"],
-        "dockerfile" | "docker" => &["Dockerfile"],
-        "make" | "mk" => &["Makefile", "make"],
-        "text" | "plain" | "plaintext" | "txt" | "log" | "output" => &[],
+        "docker" => &["dockerfile"],
+        "yaml-stream" => &["yaml"],
         _ => &[],
     }
 }

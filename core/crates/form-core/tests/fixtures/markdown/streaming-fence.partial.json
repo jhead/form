@@ -11,7 +11,7 @@
       ]
     },
     {
-      "id": "b1-87751b645997",
+      "id": "b1-13270ed59fa0",
       "type": "codeBlock",
       "language": "rust",
       "code": "fn main() {\n    let x = 1;\n",
@@ -54,7 +54,7 @@
         {
           "start": 22,
           "len": 1,
-          "scope": "keyword.operator.rust"
+          "scope": "keyword.operator.assignment.rust"
         },
         {
           "start": 24,

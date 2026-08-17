@@ -11,7 +11,7 @@
       ]
     },
     {
-      "id": "b1-0b49bcf3541f",
+      "id": "b1-0563e8fbcce6",
       "type": "codeBlock",
       "language": "rust",
       "code": "let party = \"🎉 日本語 café\";\nlet plain = \"ascii\";\n",
@@ -24,7 +24,7 @@
         {
           "start": 10,
           "len": 1,
-          "scope": "keyword.operator.rust"
+          "scope": "keyword.operator.assignment.rust"
         },
         {
           "start": 12,
@@ -54,7 +54,7 @@
         {
           "start": 37,
           "len": 1,
-          "scope": "keyword.operator.rust"
+          "scope": "keyword.operator.assignment.rust"
         },
         {
           "start": 39,

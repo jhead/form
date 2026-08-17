@@ -602,16 +602,91 @@ fn unknown_language_falls_back_to_one_plain_token() {
 
 #[test]
 fn language_aliases_resolve_to_a_grammar() {
-    // The aliases spec 05 §4 names, plus the ones a model actually types.
+    // The aliases spec 05 §4 names, plus the ones a model actually types. Most resolve
+    // natively against two-face's set; this is what catches it if one stops.
     for alias in [
-        "ts", "tsx", "js", "jsx", "sh", "zsh", "yml", "objc", "c++", "rust", "python", "rb",
-        "golang", "bash", "console", "cpp", "csharp", "markdown", "jsonc",
+        "ts", "tsx", "js", "jsx", "sh", "zsh", "yml", "objc", "c++", "rust", "python", "python3",
+        "rb", "golang", "bash", "console", "shell", "cpp", "csharp", "markdown", "jsonc", "docker",
+        "mjs", "obj-c", "ksh",
     ] {
         let tokens = highlight::tokens(Some(alias), "x = 1;\nfoo(bar)\n");
         assert!(
             tokens.len() != 1 || tokens[0].scope != "plain",
             "`{alias}` fell through to plain"
         );
+    }
+}
+
+/// The reason `two-face` is a dependency at all: syntect's default set has no Swift, and a
+/// Swift coding-agent client rendering Swift as flat monospace is the regression that would
+/// otherwise return silently. Same for the other grammars the default set is missing.
+#[test]
+fn the_languages_the_default_syntax_set_lacks_are_highlighted() {
+    let cases = [
+        (
+            "swift",
+            "struct Point: Sendable {\n    let x: Int\n    func moved(by d: Int) -> Point {\n        Point(x: x + d)\n    }\n}\n",
+        ),
+        (
+            "typescript",
+            "export const add = (a: number, b: number): number => a + b;\n",
+        ),
+        ("tsx", "const V = () => <div className=\"x\">{count}</div>;\n"),
+        ("toml", "[package]\nname = \"form-core\"\nedition = \"2021\"\n"),
+        ("kotlin", "fun main() { val x: Int = 1; println(x) }\n"),
+        ("dockerfile", "FROM rust:1.85\nRUN cargo build --release\n"),
+        ("nix", "{ pkgs ? import <nixpkgs> {} }: pkgs.mkShell { }\n"),
+        ("zig", "const std = @import(\"std\");\npub fn main() void {}\n"),
+    ];
+    for (language, code) in cases {
+        let doc = parse(&format!("```{language}\n{code}```\n"));
+        let block = first_code_block(&doc);
+        assert_eq!(block.language.as_deref(), Some(language));
+        assert!(
+            block.tokens.len() > 1,
+            "`{language}` produced {} token(s): {:?}",
+            block.tokens.len(),
+            block.tokens
+        );
+        assert!(
+            block.tokens.iter().all(|t| t.scope != "plain"),
+            "`{language}` fell back to plain: {:?}",
+            block.tokens
+        );
+        // The scopes must still be scopes, and still be applicable to the block's text.
+        for token in &block.tokens {
+            assert!(!utf16_slice(&block.code, token.start, token.len).is_empty());
+        }
+    }
+}
+
+#[test]
+fn warming_loads_the_syntax_set_and_is_idempotent() {
+    warm();
+    let after = Instant::now();
+    warm();
+    assert!(
+        after.elapsed() < std::time::Duration::from_millis(5),
+        "a second warm must not reload the dump"
+    );
+    // And a code block still highlights normally afterwards.
+    assert!(
+        first_code_block(&parse("```swift\nlet x = 1\n```\n"))
+            .tokens
+            .len()
+            > 1
+    );
+}
+
+/// A fence that asks for no highlighting gets the same answer an unknown one does, rather
+/// than the set's `Plain Text` grammar quietly emitting nothing at all.
+#[test]
+fn explicitly_plain_fences_get_one_plain_token() {
+    for language in ["text", "plaintext", "txt", "none", "log", "output"] {
+        let doc = parse(&format!("```{language}\nnot code, just output\n```\n"));
+        let block = first_code_block(&doc);
+        assert_eq!(block.tokens.len(), 1, "for {language}");
+        assert_eq!(block.tokens[0].scope, "plain", "for {language}");
     }
 }
 
@@ -751,7 +826,9 @@ fn parses_a_120_block_60kb_document_within_budget() {
     // once per process, which the app pays before the first token arrives rather than on
     // any one parse. The warm-up must include a code block, or the load lands inside the
     // measurement instead.
+    let load = Instant::now();
     let _ = parse(&generated_document(6, "warmup"));
+    let load = load.elapsed();
 
     let source = generated_document(120, "budget");
     assert!(
@@ -773,9 +850,10 @@ fn parses_a_120_block_60kb_document_within_budget() {
     assert_eq!(doc, again);
 
     println!(
-        "{} bytes, {} blocks — cold {:?}, warm {:?}",
+        "{} bytes, {} blocks — syntax set load {:?}, cold {:?}, warm {:?}",
         source.len(),
         doc.blocks.len(),
+        load,
         cold,
         warm
     );
@@ -850,23 +928,4 @@ fn unchanged_code_blocks_are_not_rehighlighted() {
     let a = first_code_block(&first).tokens;
     let b = first_code_block(&second).tokens;
     assert_eq!(a, b, "the memoized tokens are byte-identical");
-}
-
-#[test]
-fn probe_resolution() {
-    let set = highlight::syntaxes();
-    for l in [
-        "ts","typescript","tsx","js","javascript","jsx","mjs","cjs","node","sh","zsh","bash",
-        "shell","console","shell-session","ksh","yml","yaml","objc","objective-c","obj-c",
-        "objcpp","objective-c++","c++","cpp","cxx","cc","hpp","hxx","c#","csharp","cs","rust",
-        "rs","python","python3","py3","py","ruby","rb","golang","go","kotlin","kt","markdown",
-        "md","jsonc","json5","json","htm","html","dockerfile","docker","make","mk","makefile",
-        "swift","toml","nix","zig","css","scss","less","sql","java","php","perl","lua","r",
-        "scala","haskell","hs","elixir","ex","erlang","clojure","graphql","proto","vim","ps1",
-        "powershell","diff","xml","text","plaintext","txt","vue","svelte","ini","cmake","dart",
-        "groovy","tf","terraform","asm","fish","nu","julia","ocaml","fsharp","vb","matlab",
-    ] {
-        let direct = set.find_syntax_by_token(l).map(|s| s.name.clone());
-        println!("{l:16} direct={direct:?}");
-    }
 }

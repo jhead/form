@@ -113,10 +113,6 @@ impl Offsets {
     pub(crate) fn sql_day(&self, col: &str) -> String {
         format!("({} / {DAY_MS})", self.sql_local_ms(col))
     }
-
-    pub(crate) fn sql_hour(&self, col: &str) -> String {
-        format!("(({} % {DAY_MS}) / {HOUR_MS})", self.sql_local_ms(col))
-    }
 }
 
 /// `YYYY-MM-DD` for a local day index.

@@ -1,6 +1,6 @@
-//! The SQL layer. Everything here is `GROUP BY` except one deliberate raw pull for the
-//! percentile work, which cannot be expressed in SQLite without window functions over a
-//! sorted materialisation that costs more than reading the integers.
+//! The SQL layer: one scan of `turns` that yields every turn-derived figure at once, plus
+//! `GROUP BY` for the tables where SQLite has an index to work with. See [`scan_turns`]
+//! for why the turn side is one pass rather than five groupings.
 //!
 //! Read-only: the stats engine never writes to the store (spec 01 §1).
 
@@ -46,7 +46,7 @@ fn u64_at(row: &Row, idx: usize) -> rusqlite::Result<u64> {
 
 /// Borrowed rather than owned: the scan reads four text columns per row and allocating
 /// them would cost more than everything else it does.
-fn str_at(row: &Row, idx: usize) -> rusqlite::Result<&str> {
+fn str_at<'a>(row: &'a Row, idx: usize) -> rusqlite::Result<&'a str> {
     Ok(row.get_ref(idx)?.as_str()?)
 }
 
@@ -61,7 +61,6 @@ fn str_at(row: &Row, idx: usize) -> rusqlite::Result<&str> {
 /// statements against 34 ms for this single pass, which is the difference between missing
 /// and meeting the budget. The aggregation SQLite still does well — narrow tables, index
 /// ranges, `tool_invocations` — stays in SQL.
-#[derive(Default)]
 pub(crate) struct Scan {
     /// Per local day, ascending.
     pub(crate) days: Vec<DayRow>,
@@ -278,6 +277,23 @@ pub(crate) fn titles(conn: &Connection, ids: &[String]) -> Result<HashMap<String
         titles.insert(row.get(0)?, row.get(1)?);
     }
     Ok(titles)
+}
+
+/// Messages per local day, from the transcript log. Counted separately from turns because
+/// a turn is an assistant reply and the dashboard's "messages" line includes the user's.
+///
+/// This is the one aggregation with no index behind it: `entries` has `(session_id, seq)`
+/// only, so counting by timestamp reads every row's payload with it. See the W3 report —
+/// a covering `(kind, timestamp)` index would make it free.
+pub(crate) fn messages_by_day(conn: &Connection, w: &Window) -> Result<HashMap<i64, u64>> {
+    let sql = format!(
+        "SELECT {day} AS d, COUNT(*) FROM entries \
+         WHERE kind = 'message' AND timestamp >= ?1 AND timestamp < ?2 GROUP BY d",
+        day = w.offsets.sql_day("timestamp"),
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map([w.from_ms, w.to_ms], |r| Ok((r.get(0)?, u64_at(r, 1)?)))?;
+    Ok(rows.collect::<rusqlite::Result<HashMap<_, _>>>()?)
 }
 
 // -------------------------------------------------------------------- tools

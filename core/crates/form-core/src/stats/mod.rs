@@ -131,22 +131,14 @@ pub fn compute(conn: &Connection, range: StatsRange, tz: &str) -> Result<UsageSt
         offsets,
     };
 
-    let days = query::daily(conn, &window)?;
+    let scan = query::scan_turns(conn, &window)?;
     let messages = if query::has_table(conn, "entries") {
         query::messages_by_day(conn, &window)?
     } else {
         HashMap::new()
     };
-    let week_hours = query::weekday_hour(conn, &window)?;
-    let model_rows = query::models(conn, &window)?;
-    let samples = query::latency_samples(conn, &window, &model_rows)?;
     let tool_rows = if query::has_table(conn, "tool_invocations") {
         query::tools(conn, &window)?
-    } else {
-        Vec::new()
-    };
-    let session_rows = if query::has_table(conn, "sessions") {
-        query::sessions(conn, &window)?
     } else {
         Vec::new()
     };
@@ -157,25 +149,25 @@ pub fn compute(conn: &Connection, range: StatsRange, tz: &str) -> Result<UsageSt
         window.offsets.day_start_utc(today - 13).max(0),
     )?;
 
-    let daily = build_daily(&days, &messages, start_day, today);
+    let daily = build_daily(&scan.days, &messages, start_day, today);
     let heatmap = build_heatmap(&daily);
-    let (hourly, weekday_hour) = build_hours(&week_hours);
+    let (hourly, weekday_hour) = build_hours(&scan);
     let catalog = CatalogIndex::load();
-    let (models, latency) = build_models(&model_rows, &samples, &catalog);
-    let providers = build_providers(&model_rows, &catalog);
+    let (models, latency) = build_models(&scan.models, &catalog);
+    let providers = build_providers(&scan.models, &catalog);
     let tools = build_tools(&tool_rows);
-    let sessions_top = build_leaderboards(&session_rows);
-    let cache = build_cache(&daily, &model_rows, &catalog);
+    let sessions_top = build_leaderboards(conn, &scan.sessions)?;
+    let cache = build_cache(&daily, &scan.models, &catalog);
     let cost = build_cost(&daily, &models, &providers, trailing);
     let headline = build_headline(
         &daily,
         &hourly,
         &models,
-        &session_rows,
+        scan.sessions.len() as u64,
         &all_days,
         today,
         cost.total,
-        days.iter().map(|d| d.reasoning).sum(),
+        scan.days.iter().map(|d| d.reasoning).sum(),
     );
 
     Ok(UsageStats {
@@ -268,41 +260,36 @@ fn build_heatmap(daily: &[DailyBucket]) -> Vec<HeatmapCell> {
         .collect()
 }
 
-fn build_hours(rows: &[query::WeekHourRow]) -> (Vec<HourlyBucket>, Vec<Vec<u64>>) {
-    let mut weekday_hour = vec![vec![0u64; 24]; 7];
-    let mut hourly: Vec<HourlyBucket> = (0..24)
-        .map(|hour| HourlyBucket {
-            hour,
-            ..Default::default()
+fn build_hours(scan: &query::Scan) -> (Vec<HourlyBucket>, Vec<Vec<u64>>) {
+    let hourly = scan
+        .hourly
+        .iter()
+        .enumerate()
+        .map(|(hour, &(total_tokens, turns))| HourlyBucket {
+            hour: hour as u8,
+            total_tokens,
+            turns,
         })
         .collect();
-    for row in rows {
-        weekday_hour[row.weekday][row.hour] += row.total_tokens;
-        hourly[row.hour].total_tokens += row.total_tokens;
-        hourly[row.hour].turns += row.turns;
-    }
-    (hourly, weekday_hour)
+    (hourly, scan.weekday_hour.clone())
 }
 
 fn build_models(
-    rows: &[query::ModelRow],
-    samples: &[Vec<query::TurnSample>],
+    rows: &[(query::ModelRow, Vec<query::TurnSample>)],
     catalog: &CatalogIndex,
 ) -> (Vec<ModelStat>, Vec<LatencyStat>) {
     let shares = share_of(
-        rows.iter().map(|r| r.total_tokens),
-        rows.iter().map(|r| r.turns),
+        rows.iter().map(|(r, _)| r.total_tokens),
+        rows.iter().map(|(r, _)| r.turns),
     );
     let mut models = Vec::with_capacity(rows.len());
     let mut latency = Vec::with_capacity(rows.len());
 
-    for (i, row) in rows.iter().enumerate() {
+    for (i, (row, turn_samples)) in rows.iter().enumerate() {
         let model = ModelRefLite {
             provider_id: row.provider_id.clone(),
             model_id: row.model_id.clone(),
         };
-        let empty = Vec::new();
-        let turn_samples = samples.get(i).unwrap_or(&empty);
 
         let mut ttfts: Vec<u64> = turn_samples
             .iter()
@@ -345,10 +332,13 @@ fn build_models(
     (models, latency)
 }
 
-fn build_providers(rows: &[query::ModelRow], catalog: &CatalogIndex) -> Vec<ProviderStat> {
+fn build_providers(
+    rows: &[(query::ModelRow, Vec<query::TurnSample>)],
+    catalog: &CatalogIndex,
+) -> Vec<ProviderStat> {
     let mut order: Vec<String> = Vec::new();
     let mut totals: HashMap<&str, (u64, u64, f64)> = HashMap::new();
-    for row in rows {
+    for (row, _) in rows {
         let entry = totals.entry(row.provider_id.as_str()).or_insert_with(|| {
             order.push(row.provider_id.clone());
             (0, 0, 0.0)
@@ -411,14 +401,10 @@ fn build_tools(rows: &[query::ToolRow]) -> Vec<ToolStat> {
         .collect()
 }
 
-fn build_leaderboards(rows: &[query::SessionRow]) -> SessionLeaderboards {
-    let rank = |row: &query::SessionRow| SessionRank {
-        session_id: row.session_id.clone(),
-        title: row.title.clone(),
-        tokens: row.tokens,
-        duration_ms: row.duration_ms,
-        turns: row.turns,
-    };
+fn build_leaderboards(
+    conn: &Connection,
+    rows: &[query::SessionRow],
+) -> Result<SessionLeaderboards> {
     let top = |mut ranked: Vec<SessionRank>, key: fn(&SessionRank) -> u64| {
         ranked.sort_by(|a, b| {
             key(b)
@@ -428,17 +414,53 @@ fn build_leaderboards(rows: &[query::SessionRow]) -> SessionLeaderboards {
         ranked.truncate(10);
         ranked
     };
-    let all: Vec<SessionRank> = rows.iter().map(rank).collect();
-    SessionLeaderboards {
+    let all: Vec<SessionRank> = rows
+        .iter()
+        .map(|row| SessionRank {
+            session_id: row.session_id.clone(),
+            title: String::new(),
+            tokens: row.tokens,
+            duration_ms: row.duration_ms,
+            turns: row.turns,
+        })
+        .collect();
+    let mut boards = SessionLeaderboards {
         by_tokens: top(all.clone(), |r| r.tokens),
         by_duration: top(all.clone(), |r| r.duration_ms),
         by_turns: top(all, |r| r.turns),
+    };
+
+    let mut ids: Vec<String> = boards
+        .by_tokens
+        .iter()
+        .chain(&boards.by_duration)
+        .chain(&boards.by_turns)
+        .map(|r| r.session_id.clone())
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let titles = if query::has_table(conn, "sessions") {
+        query::titles(conn, &ids)?
+    } else {
+        HashMap::new()
+    };
+    for board in [
+        &mut boards.by_tokens,
+        &mut boards.by_duration,
+        &mut boards.by_turns,
+    ] {
+        for rank in board.iter_mut() {
+            if let Some(title) = titles.get(&rank.session_id) {
+                rank.title.clone_from(title);
+            }
+        }
     }
+    Ok(boards)
 }
 
 fn build_cache(
     daily: &[DailyBucket],
-    models: &[query::ModelRow],
+    models: &[(query::ModelRow, Vec<query::TurnSample>)],
     catalog: &CatalogIndex,
 ) -> CacheStats {
     let read: u64 = daily.iter().map(|d| d.cache_read).sum();
@@ -446,7 +468,7 @@ fn build_cache(
     // What those tokens would have cost billed as fresh input, minus what they did cost.
     let estimated_savings = models
         .iter()
-        .map(|m| {
+        .map(|(m, _)| {
             let p = catalog.pricing(&m.provider_id, &m.model_id);
             m.cache_read as f64 * (p.input - p.cache_read).max(0.0) / 1_000_000.0
         })
@@ -517,7 +539,7 @@ fn build_headline(
     daily: &[DailyBucket],
     hourly: &[HourlyBucket],
     models: &[ModelStat],
-    sessions: &[query::SessionRow],
+    session_count: u64,
     all_days: &[i64],
     today: i64,
     total_cost: f64,
@@ -526,7 +548,6 @@ fn build_headline(
     let turns: u64 = daily.iter().map(|d| d.turns).sum();
     let total_tokens: u64 = daily.iter().map(|d| d.total_tokens).sum();
     let duration_ms: u64 = daily.iter().map(|d| d.duration_ms).sum();
-    let session_count = sessions.len() as u64;
     let (current_streak, longest_streak) = streaks(all_days, today);
 
     let peak_hour = hourly

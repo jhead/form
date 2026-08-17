@@ -25,6 +25,23 @@ on: [push]
 template <typename T> T max(T a, T b) { return a > b ? a : b; }
 ```
 
+```swift
+struct Point: Sendable {
+    let x: Int
+    func moved(by delta: Int) -> Point { Point(x: x + delta) }
+}
+```
+
+```toml
+[package]
+name = "form-core"
+edition = "2021"
+```
+
+```text
+explicitly not code
+```
+
 ```wingdings
 this language does not exist
 ```

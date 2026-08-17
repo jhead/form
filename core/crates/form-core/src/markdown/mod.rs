@@ -157,6 +157,16 @@ pub struct MarkdownDoc {
     pub blocks: Vec<MarkdownBlock>,
 }
 
+/// Load the syntax set now rather than on the first code block.
+///
+/// Deserializing the grammar dump costs ~22 ms once per process. It is lazy, so without
+/// this it lands on whichever parse first sees a fenced block — which during a live run is
+/// a dropped frame in the middle of a streaming answer. Call it once at startup, off the
+/// first frame's critical path.
+pub fn warm() {
+    highlight::warm();
+}
+
 /// Parse a finished document.
 pub fn parse(text: &str) -> MarkdownDoc {
     parse_streaming(text, true)

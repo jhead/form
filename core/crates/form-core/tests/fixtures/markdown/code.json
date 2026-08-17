@@ -11,7 +11,7 @@
       ]
     },
     {
-      "id": "b1-b47ba051ab0a",
+      "id": "b1-a2f5f1fe3127",
       "type": "codeBlock",
       "language": "rust",
       "code": "fn main() {\n    let greeting: &str = \"hello\";\n    println!(\"{greeting}\");\n}\n",
@@ -59,7 +59,7 @@
         {
           "start": 30,
           "len": 1,
-          "scope": "keyword.operator.rust"
+          "scope": "keyword.operator.bitwise.rust"
         },
         {
           "start": 31,
@@ -69,7 +69,7 @@
         {
           "start": 35,
           "len": 1,
-          "scope": "keyword.operator.rust"
+          "scope": "keyword.operator.assignment.rust"
         },
         {
           "start": 37,
@@ -135,7 +135,7 @@
       "partial": false
     },
     {
-      "id": "b2-79822d55a9e7",
+      "id": "b2-e8a896988b13",
       "type": "codeBlock",
       "language": "ts",
       "code": "export const add = (a: number, b: number): number => a + b;\n",
@@ -143,97 +143,102 @@
         {
           "start": 0,
           "len": 6,
-          "scope": "keyword.control.import-export.js"
+          "scope": "keyword.control.export.ts"
         },
         {
           "start": 7,
           "len": 5,
-          "scope": "storage.type.js"
+          "scope": "storage.type.ts"
         },
         {
           "start": 13,
           "len": 3,
-          "scope": "variable.other.readwrite.js"
+          "scope": "entity.name.function.ts"
         },
         {
           "start": 17,
           "len": 1,
-          "scope": "keyword.operator.assignment.js"
+          "scope": "keyword.operator.assignment.ts"
         },
         {
           "start": 19,
           "len": 1,
-          "scope": "punctuation.section.group.js"
+          "scope": "punctuation.definition.parameters.begin.ts"
         },
         {
           "start": 20,
           "len": 1,
-          "scope": "variable.other.readwrite.js"
+          "scope": "variable.parameter.ts"
         },
         {
           "start": 21,
           "len": 1,
-          "scope": "meta.group.js"
+          "scope": "keyword.operator.type.annotation.ts"
         },
         {
           "start": 23,
           "len": 6,
-          "scope": "variable.other.readwrite.js"
+          "scope": "support.type.primitive.ts"
         },
         {
           "start": 29,
           "len": 1,
-          "scope": "punctuation.separator.comma.js"
+          "scope": "punctuation.separator.parameter.ts"
         },
         {
           "start": 31,
           "len": 1,
-          "scope": "variable.other.readwrite.js"
+          "scope": "variable.parameter.ts"
         },
         {
           "start": 32,
           "len": 1,
-          "scope": "meta.group.js"
+          "scope": "keyword.operator.type.annotation.ts"
         },
         {
           "start": 34,
           "len": 6,
-          "scope": "variable.other.readwrite.js"
+          "scope": "support.type.primitive.ts"
         },
         {
           "start": 40,
           "len": 1,
-          "scope": "punctuation.section.group.js"
+          "scope": "punctuation.definition.parameters.end.ts"
+        },
+        {
+          "start": 41,
+          "len": 1,
+          "scope": "keyword.operator.type.annotation.ts"
         },
         {
           "start": 43,
           "len": 6,
-          "scope": "variable.parameter.function.js"
+          "scope": "support.type.primitive.ts"
         },
         {
           "start": 50,
           "len": 2,
-          "scope": "storage.type.function.arrow.js"
+          "scope": "storage.type.function.arrow.ts"
         },
         {
           "start": 53,
           "len": 1,
-          "scope": "variable.other.readwrite.js"
+          "scope": "variable.other.readwrite.ts"
         },
         {
           "start": 55,
           "len": 1,
-          "scope": "keyword.operator.arithmetic.js"
+          "scope": "keyword.operator.arithmetic.ts"
         },
         {
           "start": 57,
           "len": 1,
-          "scope": "variable.other.readwrite.js"
+          "scope": "variable.other.readwrite.ts"
         },
         {
           "start": 58,
           "len": 1,
-          "scope": "punctuation.terminator.statement.js"
+          "scope": "punctuation.terminator.statement.ts"
         }
       ],
       "partial": false
@@ -347,7 +352,7 @@
       "partial": false
     },
     {
-      "id": "b5-da408e81d085",
+      "id": "b5-881bf3ad92b7",
       "type": "codeBlock",
       "language": "c++",
       "code": "template <typename T> T max(T a, T b) { return a > b ? a : b; }\n",
@@ -425,7 +430,7 @@
         {
           "start": 40,
           "len": 6,
-          "scope": "keyword.control.c++"
+          "scope": "keyword.control.flow.return.c++"
         },
         {
           "start": 47,
@@ -476,7 +481,184 @@
       "partial": false
     },
     {
-      "id": "b6-43d72192a928",
+      "id": "b6-cabd232d218a",
+      "type": "codeBlock",
+      "language": "swift",
+      "code": "struct Point: Sendable {\n    let x: Int\n    func moved(by delta: Int) -> Point { Point(x: x + delta) }\n}\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 6,
+          "scope": "storage.type.swift"
+        },
+        {
+          "start": 29,
+          "len": 3,
+          "scope": "storage.type.swift"
+        },
+        {
+          "start": 36,
+          "len": 3,
+          "scope": "support.type.swift"
+        },
+        {
+          "start": 44,
+          "len": 4,
+          "scope": "storage.type.function.swift"
+        },
+        {
+          "start": 49,
+          "len": 5,
+          "scope": "entity.type.function.swift"
+        },
+        {
+          "start": 54,
+          "len": 1,
+          "scope": "punctuation.definition.function-arguments.begin.swift"
+        },
+        {
+          "start": 55,
+          "len": 9,
+          "scope": "meta.parameter-clause.swift"
+        },
+        {
+          "start": 65,
+          "len": 3,
+          "scope": "support.type.swift"
+        },
+        {
+          "start": 68,
+          "len": 1,
+          "scope": "punctuation.definition.function-arguments.end.swift"
+        },
+        {
+          "start": 70,
+          "len": 2,
+          "scope": "keyword.operator.function-result.swift"
+        },
+        {
+          "start": 73,
+          "len": 5,
+          "scope": "meta.function-result.swift"
+        },
+        {
+          "start": 79,
+          "len": 1,
+          "scope": "punctuation.definition.code-block.begin.swift"
+        },
+        {
+          "start": 81,
+          "len": 10,
+          "scope": "meta.function-declaration.swift"
+        },
+        {
+          "start": 92,
+          "len": 1,
+          "scope": "keyword.operator.arithmetic.swift"
+        },
+        {
+          "start": 94,
+          "len": 6,
+          "scope": "meta.function-declaration.swift"
+        },
+        {
+          "start": 101,
+          "len": 1,
+          "scope": "punctuation.definition.code-block.end.swift"
+        }
+      ],
+      "partial": false
+    },
+    {
+      "id": "b7-8b2230089c19",
+      "type": "codeBlock",
+      "language": "toml",
+      "code": "[package]\nname = \"form-core\"\nedition = \"2021\"\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 1,
+          "scope": "punctuation.definition.table.begin.toml"
+        },
+        {
+          "start": 1,
+          "len": 7,
+          "scope": "entity.name.table.toml"
+        },
+        {
+          "start": 8,
+          "len": 1,
+          "scope": "punctuation.definition.table.end.toml"
+        },
+        {
+          "start": 10,
+          "len": 4,
+          "scope": "entity.name.tag.toml"
+        },
+        {
+          "start": 15,
+          "len": 1,
+          "scope": "punctuation.definition.key-value.toml"
+        },
+        {
+          "start": 17,
+          "len": 1,
+          "scope": "punctuation.definition.string.begin.toml"
+        },
+        {
+          "start": 18,
+          "len": 9,
+          "scope": "string.quoted.double.basic.toml"
+        },
+        {
+          "start": 27,
+          "len": 1,
+          "scope": "punctuation.definition.string.end.toml"
+        },
+        {
+          "start": 29,
+          "len": 7,
+          "scope": "entity.name.tag.toml"
+        },
+        {
+          "start": 37,
+          "len": 1,
+          "scope": "punctuation.definition.key-value.toml"
+        },
+        {
+          "start": 39,
+          "len": 1,
+          "scope": "punctuation.definition.string.begin.toml"
+        },
+        {
+          "start": 40,
+          "len": 4,
+          "scope": "string.quoted.double.basic.toml"
+        },
+        {
+          "start": 44,
+          "len": 1,
+          "scope": "punctuation.definition.string.end.toml"
+        }
+      ],
+      "partial": false
+    },
+    {
+      "id": "b8-8c3063bc7adf",
+      "type": "codeBlock",
+      "language": "text",
+      "code": "explicitly not code\n",
+      "tokens": [
+        {
+          "start": 0,
+          "len": 20,
+          "scope": "plain"
+        }
+      ],
+      "partial": false
+    },
+    {
+      "id": "b9-43d72192a928",
       "type": "codeBlock",
       "language": "wingdings",
       "code": "this language does not exist\n",
@@ -490,7 +672,7 @@
       "partial": false
     },
     {
-      "id": "b7-09490227ee7d",
+      "id": "b10-09490227ee7d",
       "type": "codeBlock",
       "language": "diff",
       "code": "--- a/x\n+++ b/x\n-removed\n+added\n kept\n",
