@@ -31,7 +31,8 @@ struct UserMessageRow: View, Equatable {
             MessageActions(
                 timestamp: message.timestamp,
                 isVisible: isHovering,
-                copyText: message.content.plainText,
+                // What the user typed, not the core's attachment scaffolding.
+                copyText: parts.prompt,
                 onRetry: onRetry,
                 onBranch: onBranch)
 
@@ -55,11 +56,23 @@ struct UserMessageRow: View, Equatable {
             // W13's viewer, so `←`/`→` walks this message's attachments (F3.4).
             SentAttachmentsView(items: attachments)
 
-            Text(message.content.plainText)
-                .typeStyle(theme.typography.body)
-                .foregroundStyle(theme.color.textPrimary)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            // A file the core could not inline is named in its own text block; it is part of
+            // what the model was sent, so it is shown — as a caption above the prompt rather
+            // than run into it.
+            ForEach(Array(parts.notes.enumerated()), id: \.offset) { _, note in
+                Text(note)
+                    .typeStyle(theme.typography.micro)
+                    .foregroundStyle(theme.color.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !parts.prompt.isEmpty {
+                Text(parts.prompt)
+                    .typeStyle(theme.typography.body)
+                    .foregroundStyle(theme.color.textPrimary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.vertical, theme.metrics.spacing.lg)
         .padding(.horizontal, 14)  // 12/14 padding, spec 08 §1 — between `lg` and `xl`
@@ -72,6 +85,24 @@ struct UserMessageRow: View, Equatable {
         .frame(
             maxWidth: max(0, columnWidth) * theme.metrics.messageMaxWidthFraction,
             alignment: .trailing)
+    }
+
+    /// A user message is `string | (text | image)[]` (spec 00). With attachments the core
+    /// sends the block form: image blocks, then a text block per file it could not inline,
+    /// then the prompt — always last (`Core::user_message`). Joining those with
+    /// `UserContent.plainText` would run `[attached: …]` straight into the prompt, so they
+    /// are split here and rendered as separate lines.
+    private var parts: (notes: [String], prompt: String) { Self.parts(of: message.content) }
+
+    static func parts(of content: UserContent) -> (notes: [String], prompt: String) {
+        switch content {
+        case let .text(text):
+            return ([], text)
+        case let .blocks(blocks):
+            var texts = blocks.compactMap { $0.asText?.text }
+            let prompt = texts.popLast() ?? ""
+            return (texts, prompt)
+        }
     }
 
     /// A sent image arrives in the transcript as an inline `ImageContent` block — the core

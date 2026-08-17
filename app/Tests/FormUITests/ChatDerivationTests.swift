@@ -217,6 +217,24 @@ struct TranscriptBuilderTests {
         #expect(model.message == "something went wrong: really")
     }
 
+    @Test("a user message renders in both of its wire shapes")
+    func userContentShapes() {
+        let bare = UserMessageRow.parts(of: .text("read the router"))
+        #expect(bare.notes.isEmpty)
+        #expect(bare.prompt == "read the router")
+
+        // With attachments the core sends blocks: images, then a line per file it could not
+        // inline, then the prompt last (`Core::user_message`).
+        let withAttachments = UserMessageRow.parts(
+            of: .blocks([
+                .image(ImageContent(data: "AAAA", mimeType: "image/png")),
+                .text("[attached: notes.pdf (application/pdf, 284910 bytes)]"),
+                .text("summarise these"),
+            ]))
+        #expect(withAttachments.notes == ["[attached: notes.pdf (application/pdf, 284910 bytes)]"])
+        #expect(withAttachments.prompt == "summarise these")
+    }
+
     @Test("queued prompts land after the transcript")
     func queued() {
         let items = TranscriptBuilder.items(
