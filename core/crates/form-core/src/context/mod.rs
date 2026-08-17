@@ -79,7 +79,11 @@ pub fn resolve_system_prompt(session: &Session, custom: &str) -> String {
             prompt.push_str("Workspace root: ");
             prompt.push_str(root);
             prompt.push_str(
-                "\nAll relative paths resolve against it, and file tools refuse to leave it.",
+                "\nAll relative paths resolve against it, and file tools refuse to leave it. \
+                 Every `bash` command starts in that directory as a fresh shell: a `cd` applies \
+                 only within the single command that runs it, and it does not change where a \
+                 later command or a file tool resolves a relative path. To work inside a \
+                 subdirectory, include it in the path you pass (`sub/file.ts`), not in a `cd`.",
             );
         }
         None => prompt.push_str(

@@ -330,6 +330,14 @@ impl pi_agent::AgentEventListener for Bridge {
                 // Persist through the store so the transcript is durable, then report the
                 // entry it was given — the app keys its rendering on that id.
                 if let Some(message) = convert_message(&message) {
+                    // The prompt is already in the transcript: `Core::start_run` appends it
+                    // before the run starts, so the UI can show it immediately instead of
+                    // waiting for the provider. pi then replays it as the run's first
+                    // message, and appending that too is what duplicated every message the
+                    // user sent.
+                    if matches!(message, Message::User(_)) {
+                        return;
+                    }
                     if let Some(entry) = self
                         .ctx
                         .append_entry(&self.session_id, EntryKind::Message { message })

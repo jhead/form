@@ -475,3 +475,94 @@ async fn dump_event_shape() {
         println!("{line}");
     }
 }
+
+/// One prompt must leave exactly one user entry in the transcript.
+///
+/// `Core::start_run` appends the prompt so the UI can render it immediately, and pi replays it
+/// as the run's first message. Appending both duplicated every message the user sent.
+// A plain test on purpose: `Core::new` builds its own runtime, and `block_on` inside a
+// `#[tokio::test]` panics with "cannot start a runtime from within a runtime".
+#[test]
+#[ignore]
+fn a_prompt_appears_once_in_the_transcript() {
+    use form_core::protocol::{Command, CoreConfig, EntryKind, Message, Query};
+
+    form_core::env::load(std::path::Path::new("."));
+
+    let dir = std::env::temp_dir().join(format!("form-dup-{}", uuid::Uuid::new_v4().simple()));
+    let core = form_core::Core::new(CoreConfig {
+        data_dir: dir.to_string_lossy().into_owned(),
+        seed_mock_data: false,
+        log_level: "warn".into(),
+        harness_speed: 1.0,
+        harness: form_core::protocol::HarnessKind::Pi,
+    })
+    .expect("core starts");
+
+    let done = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let flag = done.clone();
+    core.subscribe(std::sync::Arc::new(move |event: &form_core::Event| {
+        if matches!(event.kind, form_core::EventKind::RunEnd { .. }) {
+            flag.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+    }));
+
+    let created = core.dispatch_json(&serde_json::json!({ "type": "createSession" }).to_string());
+    assert!(
+        created.contains("\"ok\":true"),
+        "createSession failed: {created}"
+    );
+    let list = core.query_json(
+        &serde_json::to_string(&Query::ListSessions {
+            include_archived: false,
+        })
+        .unwrap(),
+    );
+    let parsed: serde_json::Value = serde_json::from_str(&list).unwrap();
+    let session_id = parsed["data"]["sessions"][0]["id"]
+        .as_str()
+        .expect("session")
+        .to_string();
+
+    let prompt = "Say OK";
+    core.dispatch_json(
+        &serde_json::to_string(&Command::SendPrompt {
+            session_id: session_id.clone(),
+            text: prompt.into(),
+            attachment_ids: Vec::new(),
+        })
+        .unwrap(),
+    );
+
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(90);
+    while !done.load(std::sync::atomic::Ordering::SeqCst) && std::time::Instant::now() < deadline {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+
+    let session =
+        core.query_json(&serde_json::to_string(&Query::GetSession { session_id }).unwrap());
+    let parsed: serde_json::Value = serde_json::from_str(&session).unwrap();
+    let entries: Vec<form_core::protocol::Entry> =
+        serde_json::from_value(parsed["data"]["entries"].clone()).expect("entries");
+
+    let user_entries: Vec<_> = entries
+        .iter()
+        .filter(|e| {
+            matches!(
+                &e.kind,
+                EntryKind::Message {
+                    message: Message::User(_)
+                }
+            )
+        })
+        .collect();
+
+    println!(
+        "entries={} user_entries={}",
+        entries.len(),
+        user_entries.len()
+    );
+    assert_eq!(user_entries.len(), 1, "the prompt must appear exactly once");
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
