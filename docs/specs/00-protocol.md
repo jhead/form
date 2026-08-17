@@ -148,7 +148,7 @@ transcript per event.
 
 `Message`, `AssistantMessage`, content blocks (`text`, `thinking`, `image`, `toolCall`),
 `ToolCall`, `ToolResult`, `Usage`, `Cost`, `StopReason`, `Entry` — **structurally identical
-to `pi-core`**. See [`pi-rs/crates/pi-core/src/`](../../../pi-rs/crates/pi-core/src/).
+to `pi-core`**. See [`pi-rs/crates/pi-core/src/`](../../pi-rs/crates/pi-core/src/).
 
 form-specific:
 

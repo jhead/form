@@ -1,0 +1,28 @@
+[package]
+name = "pi-provider-misc"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Mistral, pi-messages and faux API adapters for the Pi SDK"
+
+[dependencies]
+pi-core.workspace = true
+pi-http.workspace = true
+pi-provider-common.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+async-trait.workspace = true
+futures-core.workspace = true
+futures-util.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+bytes.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+wiremock.workspace = true
+tokio.workspace = true
+pretty_assertions.workspace = true
+futures-util.workspace = true
+serde_json.workspace = true

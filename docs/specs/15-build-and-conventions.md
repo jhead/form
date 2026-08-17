@@ -65,7 +65,7 @@ references.
 ## 3. Conventions
 
 ### Rust
-- Follow [`pi-rs/AGENTS.md`](../../../pi-rs/AGENTS.md) verbatim for anything on the boundary:
+- Follow [`pi-rs/AGENTS.md`](../../pi-rs/AGENTS.md) verbatim for anything on the boundary:
   no lifetimes or generics in public signatures, owned `'static + Send + Sync` types,
   `#[serde(rename_all = "camelCase")]`, flat error enums with `code() -> &'static str`,
   never leak `anyhow` across a crate boundary, `Option<AbortSignal>` on long-running calls.

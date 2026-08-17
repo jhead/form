@@ -1,0 +1,14 @@
+data: {"type":"response.created","response":{"id":"resp_codex","status":"in_progress"}}
+
+data: {"type":"response.output_item.added","output_index":0,"item":{"type":"message","id":"msg_codex","role":"assistant","content":[],"status":"in_progress"}}
+
+data: {"type":"response.output_text.delta","output_index":0,"delta":"codex "}
+
+data: {"type":"response.output_text.delta","output_index":0,"delta":"reply"}
+
+data: {"type":"response.output_item.done","output_index":0,"item":{"type":"message","id":"msg_codex","role":"assistant","status":"completed","content":[{"type":"output_text","text":"codex reply"}]}}
+
+data: {"type":"response.done","response":{"id":"resp_codex","status":"completed","end_turn":true,"service_tier":"default","usage":{"input_tokens":80,"output_tokens":12,"total_tokens":92}}}
+
+data: [DONE]
+

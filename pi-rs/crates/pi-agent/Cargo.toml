@@ -1,0 +1,39 @@
+[package]
+name = "pi-agent"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Agent runtime with tool calling and state management (port of @earendil-works/pi-agent-core)"
+
+[dependencies]
+pi-core.workspace = true
+# For `validation::validate_tool_arguments` (W2's port of
+# `packages/ai/src/utils/validation.ts`). Nothing else in this crate does HTTP.
+pi-http.workspace = true
+# The single `AgentTool` / `ExecutionEnv` contract. Re-exported, not redefined:
+# a duplicated tool trait across this boundary would force every Swift host
+# writing a custom tool to pick one.
+pi-tools.workspace = true
+pi-telemetry.workspace = true
+# `AgentMessage` and the harness message kinds: `pi-session` owns them because
+# it owns the durable JSONL format they are persisted in.
+pi-session.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# YAML frontmatter in SKILL.md / prompt-template markdown.
+serde_norway.workspace = true
+# gitignore-semantics matching for skill directory traversal.
+ignore.workspace = true
+tokio.workspace = true
+futures.workspace = true
+futures-util.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+parking_lot.workspace = true
+tokio-stream.workspace = true
+
+[dev-dependencies]
+pi-provider-misc.workspace = true
+pretty_assertions.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync"] }

@@ -1,0 +1,2 @@
+data: {"candidates":[{"finishReason":"SAFETY"}],"responseId":"resp-4","usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":0,"totalTokenCount":1}}
+

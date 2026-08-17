@@ -43,7 +43,7 @@ Do not report success you have not verified. If you got blocked, say where.
 
 ## Conventions in brief
 
-**Rust** — follow [`pi-rs/AGENTS.md`](../pi-rs/AGENTS.md) for anything on the boundary: no
+**Rust** — follow [`pi-rs/AGENTS.md`](pi-rs/AGENTS.md) for anything on the boundary: no
 lifetimes or generics in public signatures, owned `'static + Send + Sync` types,
 `#[serde(rename_all = "camelCase")]`, flat error enums with `code()`, never leak `anyhow`.
 
@@ -59,4 +59,4 @@ decisions; do not narrate the obvious. Tests are part of done.
 
 `form` — always lowercase, wordmark in a serif face. A native macOS coding-agent client whose
 portable logic lives in Rust so Windows and Linux are a UI port later. The harness is a stub;
-the real one is being ported in parallel in [`pi-rs`](../pi-rs).
+the real one is being ported in parallel in [`pi-rs`](pi-rs).

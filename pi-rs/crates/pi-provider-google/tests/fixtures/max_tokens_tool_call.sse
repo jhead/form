@@ -1,0 +1,2 @@
+data: {"candidates":[{"content":{"parts":[{"functionCall":{"id":"call-1","name":"echo","args":{"value":"truncated"}}}]},"finishReason":"MAX_TOKENS"}],"responseId":"resp-5","usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":0,"totalTokenCount":1}}
+

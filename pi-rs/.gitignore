@@ -1,0 +1,8 @@
+/target
+**/*.rs.bk
+.DS_Store
+
+# The upstream TypeScript sources are the port spec, but they are not vendored into this
+# repo. Clone them alongside if you need them:
+#   git clone https://github.com/earendil-works/pi .upstream
+.upstream/

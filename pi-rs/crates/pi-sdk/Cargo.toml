@@ -1,0 +1,31 @@
+[package]
+name = "pi-sdk"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Facade crate re-exporting the Pi SDK surface"
+
+[dependencies]
+pi-core.workspace = true
+pi-telemetry.workspace = true
+pi-http.workspace = true
+pi-catalog.workspace = true
+pi-auth.workspace = true
+pi-agent.workspace = true
+pi-tools.workspace = true
+pi-session.workspace = true
+pi-session-sqlite.workspace = true
+pi-provider-anthropic.workspace = true
+pi-provider-openai.workspace = true
+pi-provider-google.workspace = true
+pi-provider-misc.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+futures.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

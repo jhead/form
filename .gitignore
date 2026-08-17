@@ -1,4 +1,5 @@
 core/target/
+pi-rs/target/
 app/.build/
 app/build/
 *.xcodeproj

@@ -1,0 +1,17 @@
+[package]
+name = "pi-provider-common"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Logic shared by every Pi provider adapter (message transform, option building, constrained sampling, cost)"
+
+[dependencies]
+pi-core.workspace = true
+pi-http.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true

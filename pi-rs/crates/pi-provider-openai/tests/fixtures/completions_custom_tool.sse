@@ -1,0 +1,10 @@
+data: {"id":"chatcmpl-custom","model":"gpt-5","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"ctc_1","type":"custom","custom":{"name":"calc","input":""}}]},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-custom","model":"gpt-5","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"custom":{"input":"1 + "}}]},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-custom","model":"gpt-5","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"custom":{"input":"2\n"}}]},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-custom","model":"gpt-5","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+
+data: [DONE]
+

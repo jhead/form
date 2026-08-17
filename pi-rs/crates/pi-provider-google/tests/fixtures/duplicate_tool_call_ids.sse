@@ -1,0 +1,4 @@
+data: {"candidates":[{"content":{"parts":[{"functionCall":{"id":"call_dup","name":"bash","args":{"command":"ls"}}}]}}],"responseId":"resp-6"}
+
+data: {"candidates":[{"content":{"parts":[{"functionCall":{"id":"call_dup","name":"bash","args":{"command":"pwd"}}},{"functionCall":{"name":"bash","args":{}}}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":5,"totalTokenCount":10}}
+

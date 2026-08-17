@@ -1,62 +1,89 @@
 # form
 
-A native macOS client for a coding agent. SwiftUI on top, Rust underneath.
+A macOS client for a coding agent. The interface is SwiftUI. The portable logic is Rust.
 
-Everything portable — session storage, search, settings, the provider catalog, usage
-analytics, markdown parsing, context accounting — lives in `form-core` behind a narrow C ABI,
-so Windows and Linux clients are a UI port rather than a rewrite.
+## What is here
 
-The agent harness is **not** implemented here. It is being ported in parallel in
-[`pi-rs`](../pi-rs). `form` ships against a stub harness that emits the same event protocol,
-so the entire UX runs with no LLM backend and no API keys.
+`form-core` is the Rust core. It holds session storage, full-text search, settings, the model
+catalog, usage analytics, markdown parsing, and context accounting. Swift calls it through a
+C ABI. A Windows or Linux client can reuse the same core later.
+
+`pi-rs` is a Rust port of the [pi](https://github.com/earendil-works/pi) agent SDK. It lives
+in this repo. It is not wired into the app yet.
+
+The agent harness is not implemented. The app runs against a stub harness. The stub emits the
+same events a real harness emits. Every session, token count, and cost figure you see is mock
+data. You can run the whole app with no API key.
 
 ## Build and run
 
 From the command line:
 
 ```bash
-make          # rust core + swift package + app/build/form.app
-make run      # build and launch
-make test     # rust tests + swift tests
-make lint     # cargo fmt --check + clippy -D warnings
+make          # rust core, swift package, app/build/form.app
+make run      # build, then launch
+make test     # rust tests and swift tests
+make lint     # cargo fmt --check and clippy -D warnings
 make cli      # stream a stub run to the terminal, no Swift involved
 ```
 
 In Xcode:
 
 ```bash
-make xcode    # generate form.xcodeproj and open it, then press ⌘R
+make xcode    # generate form.xcodeproj, open it, then press Cmd-R
 ```
 
-The project is generated from [`project.yml`](project.yml) and is **not** committed — a
-generated project cannot drift or produce merge conflicts, and SwiftPM stays the source of
-truth. The app target compiles `app/Sources/form` and links the package's library products,
-so there is exactly one copy of every source file. A pre-build phase runs
-[`scripts/build-core.sh`](scripts/build-core.sh) — the same script `make` uses — so pressing
-Run in Xcode rebuilds the Rust core first. Both paths share one `Info.plist`.
+The Xcode project is generated from `project.yml`. It is not committed. A pre-build phase
+builds the Rust core first. Both build paths call the same script.
 
-Requires Xcode 16+, Swift 6, a Rust toolchain, and `xcodegen` (`brew install xcodegen`) for
-the Xcode path only.
+Requires Xcode 16, Swift 6, and a Rust toolchain. The Xcode path also needs `xcodegen`.
 
 ## Layout
 
 ```
-docs/PRD.md          the product spec
-docs/specs/          one spec per workstream; 00-protocol.md is the boundary contract
-core/                Cargo workspace: form-core, form-ffi, form-cli
-app/                 SwiftPM package: FormCore, FormDesign, FormMarkdown, FormUI, form
-scripts/             app bundling
+docs/PRD.md      the product spec
+docs/specs/      one spec per area. 00-protocol.md is the boundary contract
+core/            cargo workspace: form-core, form-ffi, form-cli
+app/             swiftpm package: FormCore, FormDesign, FormMarkdown, FormUI, form
+pi-rs/           the pi SDK port, not yet integrated
+scripts/         app bundling
 ```
 
-## Architecture
+## How the two halves talk
 
 ```
-form.app  ──JSON over 9 C functions──▶  libform_ffi.a  ──▶  form-core
+form.app  ->  9 C functions carrying JSON  ->  libform_ffi.a  ->  form-core
 ```
 
-Commands are asynchronous and every outcome arrives as an event, because a Swift caller
-cannot hold or drop a Rust future. Queries are synchronous reads. Nothing crosses the
-boundary except JSON, which is what keeps a subprocess transport available later without
-touching the app layer.
+Only JSON crosses the boundary. There are no shared structs. There are no pointers into Rust
+memory.
 
-See [`docs/PRD.md`](docs/PRD.md) §4 for the full rationale.
+Queries are synchronous reads. Commands are asynchronous. Every command result arrives as an
+event, because a Swift caller cannot hold a Rust future. Cancellation is an explicit signal.
+
+Keeping the payloads serialized also keeps a subprocess transport available. Swift talks to a
+`CoreTransport` protocol. Today there is one implementation.
+
+See [docs/PRD.md](docs/PRD.md) section 4 for the full reasoning.
+
+## Wiring up pi-rs
+
+`form-core` defines its own copies of the transcript types. They match `pi-core` field for
+field. A test proves it. `core/crates/form-core/tests/pi_compat.rs` sends every type and every
+streaming event through `pi-core` and fails on any renamed or dropped field. It checks both
+directions.
+
+`pi-core` is a dev dependency. No shipping code links it.
+
+[docs/specs/16-pi-integration.md](docs/specs/16-pi-integration.md) has the plan. Read the last
+section before starting. Real tool execution changes the in-process tradeoff.
+
+## Tests
+
+```
+223 Rust tests
+301 Swift tests
+```
+
+`form-cli protocol-dump` writes one JSON fixture per protocol variant. The Swift test target
+decodes all of them. That is what catches drift between the two languages.

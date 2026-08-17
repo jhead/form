@@ -1,0 +1,6 @@
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"Hello"}]}}],"responseId":"resp-1","modelVersion":"gemini-2.5-flash-002"}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":" world"}]}}]}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"!"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":12,"candidatesTokenCount":3,"totalTokenCount":15}}
+

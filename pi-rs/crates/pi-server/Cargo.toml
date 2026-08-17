@@ -1,0 +1,26 @@
+[package]
+name = "pi-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Session server for the Pi SDK"
+
+[dependencies]
+pi-core.workspace = true
+pi-protocol.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+indexmap.workspace = true
+sha2.workspace = true
+uuid.workspace = true
+futures.workspace = true
+thiserror.workspace = true
+serde_json.workspace = true
+parking_lot.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+pi-client.workspace = true
+tokio.workspace = true
+parking_lot.workspace = true

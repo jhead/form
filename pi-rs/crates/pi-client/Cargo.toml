@@ -1,0 +1,18 @@
+[package]
+name = "pi-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Client for the Pi session server"
+
+[dependencies]
+pi-protocol.workspace = true
+tokio.workspace = true
+futures.workspace = true
+thiserror.workspace = true
+parking_lot.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio.workspace = true

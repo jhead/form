@@ -1,0 +1,4 @@
+data: {"id":"response-1","model":"mistral-large-latest","choices":[{"index":0,"finish_reason":"stop","delta":{"content":"h\u00e9llo \ud83c\udf0d"}}],"usage":{"prompt_tokens":1,"completion_tokens":2,"total_tokens":3}}
+
+data: [DONE]
+

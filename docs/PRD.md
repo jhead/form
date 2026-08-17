@@ -14,7 +14,7 @@ parsing, context accounting — lives in a Rust core (`form-core`) behind a narr
 Windows and Linux client can reuse it later without reimplementing app logic.
 
 The agent harness itself is **not** built here. It is being ported in parallel in
-[`pi-rs`](../../pi-rs) (a Rust port of the [`pi`](https://github.com/earendil-works/pi)
+[`pi-rs`](../pi-rs) (a Rust port of the [`pi`](https://github.com/earendil-works/pi)
 TypeScript SDK). `form` ships against a **stub harness** that emits the same event protocol
 `pi-rs` will emit, driven by deterministic mock data. This lets the entire UX be exercised,
 demoed and iterated on with no LLM backend and no API keys — while proving the Swift ↔ Rust

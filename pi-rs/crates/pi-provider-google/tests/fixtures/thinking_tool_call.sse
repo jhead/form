@@ -1,0 +1,8 @@
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"Let me think","thought":true,"thoughtSignature":"c2lnbmF0dXJl"}]}}],"responseId":"resp-2"}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":" harder","thought":true}]}}]}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"Running it."}]}}]}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"id":"call_1","name":"bash","args":{"command":"ls"}},"thoughtSignature":"dG9vbHNpZw=="}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":100,"cachedContentTokenCount":20,"candidatesTokenCount":30,"thoughtsTokenCount":40,"totalTokenCount":190}}
+

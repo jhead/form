@@ -1,0 +1,6 @@
+data: {"id":"llama-1","model":"local-model","choices":[{"index":0,"delta":{"role":"assistant","content":"partial "}}]}
+
+data: {"id":"llama-1","model":"local-model","choices":[{"index":0,"delta":{"content":"answer"}}]}
+
+data: [DONE]
+

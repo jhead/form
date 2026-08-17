@@ -1,0 +1,4 @@
+data: {"type":"response.created","response":{"id":"resp_err","status":"in_progress"}}
+
+data: {"type":"error","code":"server_error","message":"upstream exploded"}
+
