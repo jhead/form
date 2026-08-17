@@ -16,7 +16,10 @@ struct EndToEndTests {
             dataDir: dir.path,
             seedMockData: false,
             // 40× so the test is fast without changing event ordering.
-            harnessSpeed: 40
+            harnessSpeed: 40,
+            // The suite asserts the *protocol*, not a provider. The stub emits the same
+            // events the real agent does, so this stays offline, deterministic, and free.
+            harness: .stub
         )
         return (try CoreClient(config: config), dir)
     }

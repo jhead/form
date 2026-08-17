@@ -19,6 +19,8 @@ mod tools;
 #[cfg(test)]
 mod tests;
 
+pub mod pi;
+
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 

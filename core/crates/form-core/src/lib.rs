@@ -12,6 +12,7 @@ pub mod app;
 pub mod catalog;
 pub mod context;
 pub mod core;
+pub mod env;
 pub mod error;
 pub mod events;
 pub mod harness;

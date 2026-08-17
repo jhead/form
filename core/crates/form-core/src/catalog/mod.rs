@@ -12,6 +12,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::protocol::{Cost, ModelRef, ThinkingLevel, Usage};
 
+/// pi's full reasoning ladder, offered for any model that reports reasoning support.
+pub const ALL_THINKING_LEVELS: &[ThinkingLevel] = &[
+    ThinkingLevel::Off,
+    ThinkingLevel::Minimal,
+    ThinkingLevel::Low,
+    ThinkingLevel::Medium,
+    ThinkingLevel::High,
+    ThinkingLevel::Xhigh,
+    ThinkingLevel::Max,
+];
+
 mod search;
 
 #[cfg(test)]
@@ -231,11 +242,9 @@ pub fn format_ref(model_ref: &ModelRef) -> String {
 /// The out-of-the-box model. Kept in sync with `app::default_model_ref`, which is what the
 /// store stamps on a new session.
 pub fn default_ref() -> ModelRef {
-    let model_ref = ModelRef {
-        provider_id: "anthropic".to_string(),
-        model_id: "claude-opus-5".to_string(),
-        thinking_level: ThinkingLevel::High,
-    };
+    // One source of truth: `app::default_model_ref`. Mirroring it here would let the two
+    // drift, and the test that used to assert they matched is what caught it.
+    let model_ref = crate::app::default_model_ref();
     debug_assert!(
         resolve_ref(&model_ref).is_some(),
         "default ref must resolve"

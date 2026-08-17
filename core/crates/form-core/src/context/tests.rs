@@ -152,8 +152,22 @@ fn fixture_transcript() -> Session {
     ])
 }
 
+/// A paid model, pinned. This used to resolve `default_ref()`, which made every cost
+/// assertion depend on which model happens to ship as the default — and once that became a
+/// free model, "cost is greater than zero" was testing nothing.
 fn opus() -> Model {
-    catalog::resolve(&catalog::default_ref()).unwrap()
+    catalog::resolve(&crate::protocol::ModelRef {
+        provider_id: "anthropic".to_string(),
+        model_id: "claude-opus-5".to_string(),
+        thinking_level: crate::protocol::ThinkingLevel::High,
+    })
+    .unwrap()
+}
+
+/// Room reserved for the reply: capped at a quarter of the window, because several models
+/// report `max_output == context_window` and reserving all of it pins the ring at 100%.
+fn expected_reserve(model: &Model) -> u64 {
+    model.max_output.min(model.context_window / 4)
 }
 
 // ---------------------------------------------------------------- estimator
@@ -193,7 +207,10 @@ fn segments_sum_to_used_over_a_fixture_transcript() {
     assert!(by_kind(SegmentKind::Tools) > 0, "tool schemas are counted");
     assert!(by_kind(SegmentKind::Transcript) > 0);
     assert_eq!(by_kind(SegmentKind::Attachments), 0, "no images here");
-    assert_eq!(by_kind(SegmentKind::OutputReserve), model.max_output);
+    assert_eq!(
+        by_kind(SegmentKind::OutputReserve),
+        expected_reserve(&model)
+    );
 
     // Every segment kind appears exactly once, in the order the popover renders them.
     let kinds: Vec<SegmentKind> = usage.segments.iter().map(|s| s.kind).collect();
@@ -251,7 +268,9 @@ fn an_empty_session_still_pays_for_prompt_and_tools() {
     assert_eq!(usage.message_count, 0);
     assert_eq!(
         usage.used,
-        system_prompt_tokens(&session(vec![]), "") + tool_schema_tokens() + model.max_output
+        system_prompt_tokens(&session(vec![]), "")
+            + tool_schema_tokens()
+            + expected_reserve(&model)
     );
     assert!(usage.fraction() > 0.0 && usage.fraction() < 1.0);
 }

@@ -10,11 +10,13 @@ license = "MIT"
 
 [workspace.dependencies]
 form-core = { path = "crates/form-core" }
-# Dev-only, and deliberately a path dependency on the sibling port: it exists so a test can
-# prove form-core's transcript types still deserialize as pi-core's. See PRD §4.3 — when the
-# swap happens, form-core's wire module is deleted and pi-core is re-exported, and this test
-# is what says that is safe.
+# The real harness. `pi-core` also backs `tests/pi_compat.rs`, which proves form's transcript
+# types still match pi's field for field.
 pi-core = { path = "../pi-rs/crates/pi-core" }
+pi-sdk = { path = "../pi-rs/crates/pi-sdk" }
+pi-agent = { path = "../pi-rs/crates/pi-agent" }
+pi-catalog = { path = "../pi-rs/crates/pi-catalog" }
+pi-auth = { path = "../pi-rs/crates/pi-auth" }
 form-ffi = { path = "crates/form-ffi" }
 
 serde = { version = "1", features = ["derive"] }

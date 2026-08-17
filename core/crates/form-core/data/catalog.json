@@ -1,13 +1,18 @@
 {
   "generatedAt": "2026-08-16",
-  "note": "Hand-maintained placeholder catalog. `pi-catalog` replaces this file wholesale when it ships; keep the shape, not the numbers. Pricing is USD per 1M tokens. Within a provider the cache prices follow that provider's published rule (Anthropic: read = 10% of input, write = 125%; OpenAI/Google/xAI/DeepSeek: read is the discounted-input price, write is free; Groq/Mistral/Ollama do not bill caching at all).",
+  "note": "Offline fallback only. The app projects its catalog from pi-catalog at startup, with OpenRouter refreshed live; this is what it falls back to when the SDK cannot start.",
   "providers": [
     {
       "id": "anthropic",
       "name": "Anthropic",
       "baseUrl": "https://api.anthropic.com",
-      "auth": ["apiKey", "oauth"],
-      "envVars": ["ANTHROPIC_API_KEY"],
+      "auth": [
+        "apiKey",
+        "oauth"
+      ],
+      "envVars": [
+        "ANTHROPIC_API_KEY"
+      ],
       "models": [
         {
           "id": "claude-opus-5",
@@ -15,9 +20,26 @@
           "family": "claude",
           "contextWindow": 200000,
           "maxOutput": 64000,
-          "pricing": { "input": 5.0, "output": 25.0, "cacheRead": 0.5, "cacheWrite": 6.25 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high", "max"],
+          "pricing": {
+            "input": 5.0,
+            "output": 25.0,
+            "cacheRead": 0.5,
+            "cacheWrite": 6.25
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
           "released": "2026-05"
         },
         {
@@ -26,9 +48,26 @@
           "family": "claude",
           "contextWindow": 200000,
           "maxOutput": 64000,
-          "pricing": { "input": 3.0, "output": 15.0, "cacheRead": 0.3, "cacheWrite": 3.75 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high", "max"],
+          "pricing": {
+            "input": 3.0,
+            "output": 15.0,
+            "cacheRead": 0.3,
+            "cacheWrite": 3.75
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
           "released": "2025-09"
         },
         {
@@ -37,9 +76,25 @@
           "family": "claude",
           "contextWindow": 200000,
           "maxOutput": 64000,
-          "pricing": { "input": 1.0, "output": 5.0, "cacheRead": 0.1, "cacheWrite": 1.25 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high"],
+          "pricing": {
+            "input": 1.0,
+            "output": 5.0,
+            "cacheRead": 0.1,
+            "cacheWrite": 1.25
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high"
+          ],
           "released": "2025-10"
         },
         {
@@ -48,9 +103,26 @@
           "family": "claude",
           "contextWindow": 200000,
           "maxOutput": 32000,
-          "pricing": { "input": 15.0, "output": 75.0, "cacheRead": 1.5, "cacheWrite": 18.75 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high", "max"],
+          "pricing": {
+            "input": 15.0,
+            "output": 75.0,
+            "cacheRead": 1.5,
+            "cacheWrite": 18.75
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
           "released": "2025-08"
         },
         {
@@ -59,9 +131,22 @@
           "family": "claude",
           "contextWindow": 200000,
           "maxOutput": 8192,
-          "pricing": { "input": 0.8, "output": 4.0, "cacheRead": 0.08, "cacheWrite": 1.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": false, "caching": true, "streaming": true },
-          "thinkingLevels": ["off"],
+          "pricing": {
+            "input": 0.8,
+            "output": 4.0,
+            "cacheRead": 0.08,
+            "cacheWrite": 1.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": false,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
           "released": "2024-10",
           "deprecated": true
         }
@@ -71,8 +156,12 @@
       "id": "openai",
       "name": "OpenAI",
       "baseUrl": "https://api.openai.com/v1",
-      "auth": ["apiKey"],
-      "envVars": ["OPENAI_API_KEY"],
+      "auth": [
+        "apiKey"
+      ],
+      "envVars": [
+        "OPENAI_API_KEY"
+      ],
       "models": [
         {
           "id": "gpt-5.1",
@@ -80,9 +169,27 @@
           "family": "gpt-5",
           "contextWindow": 400000,
           "maxOutput": 128000,
-          "pricing": { "input": 1.25, "output": 10.0, "cacheRead": 0.125, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "minimal", "low", "medium", "high", "xhigh"],
+          "pricing": {
+            "input": 1.25,
+            "output": 10.0,
+            "cacheRead": 0.125,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
           "released": "2025-11"
         },
         {
@@ -91,9 +198,26 @@
           "family": "gpt-5",
           "contextWindow": 400000,
           "maxOutput": 128000,
-          "pricing": { "input": 0.25, "output": 2.0, "cacheRead": 0.025, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "minimal", "low", "medium", "high"],
+          "pricing": {
+            "input": 0.25,
+            "output": 2.0,
+            "cacheRead": 0.025,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ],
           "released": "2025-11"
         },
         {
@@ -102,9 +226,26 @@
           "family": "gpt-5",
           "contextWindow": 400000,
           "maxOutput": 128000,
-          "pricing": { "input": 1.25, "output": 10.0, "cacheRead": 0.125, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "minimal", "low", "medium", "high"],
+          "pricing": {
+            "input": 1.25,
+            "output": 10.0,
+            "cacheRead": 0.125,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ],
           "released": "2025-08"
         },
         {
@@ -113,9 +254,25 @@
           "family": "gpt-5",
           "contextWindow": 400000,
           "maxOutput": 128000,
-          "pricing": { "input": 0.05, "output": 0.4, "cacheRead": 0.005, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "minimal", "low", "medium"],
+          "pricing": {
+            "input": 0.05,
+            "output": 0.4,
+            "cacheRead": 0.005,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "minimal",
+            "low",
+            "medium"
+          ],
           "released": "2025-08"
         },
         {
@@ -124,9 +281,24 @@
           "family": "o-series",
           "contextWindow": 200000,
           "maxOutput": 100000,
-          "pricing": { "input": 1.1, "output": 4.4, "cacheRead": 0.275, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["low", "medium", "high"],
+          "pricing": {
+            "input": 1.1,
+            "output": 4.4,
+            "cacheRead": 0.275,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "low",
+            "medium",
+            "high"
+          ],
           "released": "2025-04"
         },
         {
@@ -135,9 +307,22 @@
           "family": "gpt-4",
           "contextWindow": 1047576,
           "maxOutput": 32768,
-          "pricing": { "input": 2.0, "output": 8.0, "cacheRead": 0.5, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": false, "caching": true, "streaming": true },
-          "thinkingLevels": ["off"],
+          "pricing": {
+            "input": 2.0,
+            "output": 8.0,
+            "cacheRead": 0.5,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": false,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
           "released": "2025-04"
         }
       ]
@@ -146,8 +331,13 @@
       "id": "google",
       "name": "Google",
       "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
-      "auth": ["apiKey"],
-      "envVars": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+      "auth": [
+        "apiKey"
+      ],
+      "envVars": [
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY"
+      ],
       "models": [
         {
           "id": "gemini-3-pro",
@@ -155,9 +345,26 @@
           "family": "gemini",
           "contextWindow": 1048576,
           "maxOutput": 65536,
-          "pricing": { "input": 2.0, "output": 12.0, "cacheRead": 0.2, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high", "max"],
+          "pricing": {
+            "input": 2.0,
+            "output": 12.0,
+            "cacheRead": 0.2,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
           "released": "2025-11"
         },
         {
@@ -166,9 +373,25 @@
           "family": "gemini",
           "contextWindow": 1048576,
           "maxOutput": 65536,
-          "pricing": { "input": 1.25, "output": 10.0, "cacheRead": 0.125, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high"],
+          "pricing": {
+            "input": 1.25,
+            "output": 10.0,
+            "cacheRead": 0.125,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high"
+          ],
           "released": "2025-06"
         },
         {
@@ -177,9 +400,25 @@
           "family": "gemini",
           "contextWindow": 1048576,
           "maxOutput": 65536,
-          "pricing": { "input": 0.3, "output": 2.5, "cacheRead": 0.03, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high"],
+          "pricing": {
+            "input": 0.3,
+            "output": 2.5,
+            "cacheRead": 0.03,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high"
+          ],
           "released": "2025-06"
         },
         {
@@ -188,9 +427,24 @@
           "family": "gemini",
           "contextWindow": 1048576,
           "maxOutput": 65536,
-          "pricing": { "input": 0.1, "output": 0.4, "cacheRead": 0.01, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium"],
+          "pricing": {
+            "input": 0.1,
+            "output": 0.4,
+            "cacheRead": 0.01,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium"
+          ],
           "released": "2025-07"
         }
       ]
@@ -199,19 +453,209 @@
       "id": "openrouter",
       "name": "OpenRouter",
       "baseUrl": "https://openrouter.ai/api/v1",
-      "auth": ["apiKey", "oauth"],
-      "envVars": ["OPENROUTER_API_KEY"],
+      "auth": [
+        "apiKey",
+        "oauth"
+      ],
+      "envVars": [
+        "OPENROUTER_API_KEY"
+      ],
       "note": "OpenRouter proxies hundreds of models from other providers; this is a representative subset. Ids keep the upstream `vendor/model` form, and prices track the upstream list with OpenRouter's routing fee applied at billing time.",
       "models": [
+        {
+          "id": "nvidia/nemotron-3-super-120b-a12b:free",
+          "name": "Nemotron 3 Super 120B (free)",
+          "family": "openrouter",
+          "contextWindow": 262144,
+          "maxOutput": 262144,
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "released": null
+        },
+        {
+          "id": "nvidia/nemotron-3.5-lightning:free",
+          "name": "Nemotron 3.5 Lightning (free)",
+          "family": "openrouter",
+          "contextWindow": 262144,
+          "maxOutput": 262144,
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "released": null
+        },
+        {
+          "id": "nvidia/nemotron-3-ultra-550b-a55b:free",
+          "name": "Nemotron 3 Ultra 550B (free)",
+          "family": "openrouter",
+          "contextWindow": 262144,
+          "maxOutput": 262144,
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "released": null
+        },
+        {
+          "id": "google/gemma-4-26b-a4b-it:free",
+          "name": "Gemma 4 26B (free)",
+          "family": "openrouter",
+          "contextWindow": 262144,
+          "maxOutput": 32768,
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
+          "released": null
+        },
+        {
+          "id": "google/gemma-4-31b-it:free",
+          "name": "Gemma 4 31B (free)",
+          "family": "openrouter",
+          "contextWindow": 262144,
+          "maxOutput": 32768,
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
+          "released": null
+        },
+        {
+          "id": "z-ai/glm-5.2:free",
+          "name": "GLM 5.2 (free)",
+          "family": "openrouter",
+          "contextWindow": 128000,
+          "maxOutput": 128000,
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "released": null
+        },
         {
           "id": "anthropic/claude-sonnet-4.5",
           "name": "Claude Sonnet 4.5",
           "family": "claude",
           "contextWindow": 200000,
           "maxOutput": 64000,
-          "pricing": { "input": 3.0, "output": 15.0, "cacheRead": 0.3, "cacheWrite": 3.75 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high", "max"]
+          "pricing": {
+            "input": 3.0,
+            "output": 15.0,
+            "cacheRead": 0.3,
+            "cacheWrite": 3.75
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high",
+            "max"
+          ]
         },
         {
           "id": "openai/gpt-5.1",
@@ -219,9 +663,27 @@
           "family": "gpt-5",
           "contextWindow": 400000,
           "maxOutput": 128000,
-          "pricing": { "input": 1.25, "output": 10.0, "cacheRead": 0.125, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "minimal", "low", "medium", "high", "xhigh"]
+          "pricing": {
+            "input": 1.25,
+            "output": 10.0,
+            "cacheRead": 0.125,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ]
         },
         {
           "id": "google/gemini-3-pro",
@@ -229,9 +691,26 @@
           "family": "gemini",
           "contextWindow": 1048576,
           "maxOutput": 65536,
-          "pricing": { "input": 2.0, "output": 12.0, "cacheRead": 0.2, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high", "max"]
+          "pricing": {
+            "input": 2.0,
+            "output": 12.0,
+            "cacheRead": 0.2,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high",
+            "max"
+          ]
         },
         {
           "id": "x-ai/grok-4-fast",
@@ -239,9 +718,24 @@
           "family": "grok",
           "contextWindow": 2000000,
           "maxOutput": 30000,
-          "pricing": { "input": 0.2, "output": 0.5, "cacheRead": 0.05, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "high"]
+          "pricing": {
+            "input": 0.2,
+            "output": 0.5,
+            "cacheRead": 0.05,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "high"
+          ]
         },
         {
           "id": "deepseek/deepseek-v3.2",
@@ -249,9 +743,24 @@
           "family": "deepseek",
           "contextWindow": 163840,
           "maxOutput": 65536,
-          "pricing": { "input": 0.28, "output": 0.42, "cacheRead": 0.028, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "medium", "high"]
+          "pricing": {
+            "input": 0.28,
+            "output": 0.42,
+            "cacheRead": 0.028,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "medium",
+            "high"
+          ]
         },
         {
           "id": "meta-llama/llama-4-maverick",
@@ -259,9 +768,22 @@
           "family": "llama",
           "contextWindow": 1048576,
           "maxOutput": 16384,
-          "pricing": { "input": 0.2, "output": 0.6, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": false, "caching": false, "streaming": true },
-          "thinkingLevels": ["off"]
+          "pricing": {
+            "input": 0.2,
+            "output": 0.6,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ]
         }
       ]
     },
@@ -269,8 +791,12 @@
       "id": "xai",
       "name": "xAI",
       "baseUrl": "https://api.x.ai/v1",
-      "auth": ["apiKey"],
-      "envVars": ["XAI_API_KEY"],
+      "auth": [
+        "apiKey"
+      ],
+      "envVars": [
+        "XAI_API_KEY"
+      ],
       "models": [
         {
           "id": "grok-4",
@@ -278,9 +804,22 @@
           "family": "grok",
           "contextWindow": 256000,
           "maxOutput": 32768,
-          "pricing": { "input": 3.0, "output": 15.0, "cacheRead": 0.75, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["high"],
+          "pricing": {
+            "input": 3.0,
+            "output": 15.0,
+            "cacheRead": 0.75,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "high"
+          ],
           "released": "2025-07"
         },
         {
@@ -289,9 +828,24 @@
           "family": "grok",
           "contextWindow": 2000000,
           "maxOutput": 30000,
-          "pricing": { "input": 0.2, "output": 0.5, "cacheRead": 0.05, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "high"],
+          "pricing": {
+            "input": 0.2,
+            "output": 0.5,
+            "cacheRead": 0.05,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "high"
+          ],
           "released": "2025-09"
         },
         {
@@ -300,9 +854,24 @@
           "family": "grok",
           "contextWindow": 256000,
           "maxOutput": 10000,
-          "pricing": { "input": 0.2, "output": 1.5, "cacheRead": 0.02, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["off", "low", "high"],
+          "pricing": {
+            "input": 0.2,
+            "output": 1.5,
+            "cacheRead": 0.02,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "high"
+          ],
           "released": "2025-08"
         }
       ]
@@ -311,8 +880,12 @@
       "id": "groq",
       "name": "Groq",
       "baseUrl": "https://api.groq.com/openai/v1",
-      "auth": ["apiKey"],
-      "envVars": ["GROQ_API_KEY"],
+      "auth": [
+        "apiKey"
+      ],
+      "envVars": [
+        "GROQ_API_KEY"
+      ],
       "note": "Inference-only host for open-weight models. No prompt caching, so cache prices are zero.",
       "models": [
         {
@@ -321,9 +894,25 @@
           "family": "gpt-oss",
           "contextWindow": 131072,
           "maxOutput": 65536,
-          "pricing": { "input": 0.15, "output": 0.75, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": true, "caching": false, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high"],
+          "pricing": {
+            "input": 0.15,
+            "output": 0.75,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high"
+          ],
           "released": "2025-08"
         },
         {
@@ -332,9 +921,22 @@
           "family": "kimi",
           "contextWindow": 262144,
           "maxOutput": 16384,
-          "pricing": { "input": 1.0, "output": 3.0, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": false, "caching": false, "streaming": true },
-          "thinkingLevels": ["off"],
+          "pricing": {
+            "input": 1.0,
+            "output": 3.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
           "released": "2025-07"
         },
         {
@@ -343,9 +945,25 @@
           "family": "qwen",
           "contextWindow": 131072,
           "maxOutput": 40960,
-          "pricing": { "input": 0.29, "output": 0.59, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": true, "caching": false, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high"],
+          "pricing": {
+            "input": 0.29,
+            "output": 0.59,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high"
+          ],
           "released": "2025-05"
         },
         {
@@ -354,9 +972,22 @@
           "family": "llama",
           "contextWindow": 131072,
           "maxOutput": 32768,
-          "pricing": { "input": 0.59, "output": 0.79, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": false, "caching": false, "streaming": true },
-          "thinkingLevels": ["off"],
+          "pricing": {
+            "input": 0.59,
+            "output": 0.79,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
           "released": "2024-12"
         }
       ]
@@ -365,8 +996,12 @@
       "id": "mistral",
       "name": "Mistral",
       "baseUrl": "https://api.mistral.ai/v1",
-      "auth": ["apiKey"],
-      "envVars": ["MISTRAL_API_KEY"],
+      "auth": [
+        "apiKey"
+      ],
+      "envVars": [
+        "MISTRAL_API_KEY"
+      ],
       "models": [
         {
           "id": "mistral-large-latest",
@@ -374,9 +1009,22 @@
           "family": "mistral",
           "contextWindow": 131072,
           "maxOutput": 32768,
-          "pricing": { "input": 2.0, "output": 6.0, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": false, "caching": false, "streaming": true },
-          "thinkingLevels": ["off"],
+          "pricing": {
+            "input": 2.0,
+            "output": 6.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
           "released": "2024-11"
         },
         {
@@ -385,9 +1033,22 @@
           "family": "mistral",
           "contextWindow": 131072,
           "maxOutput": 32768,
-          "pricing": { "input": 0.4, "output": 2.0, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": false, "caching": false, "streaming": true },
-          "thinkingLevels": ["off"],
+          "pricing": {
+            "input": 0.4,
+            "output": 2.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
           "released": "2025-05"
         },
         {
@@ -396,9 +1057,24 @@
           "family": "magistral",
           "contextWindow": 131072,
           "maxOutput": 32768,
-          "pricing": { "input": 2.0, "output": 5.0, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": true, "reasoning": true, "caching": false, "streaming": true },
-          "thinkingLevels": ["off", "medium", "high"],
+          "pricing": {
+            "input": 2.0,
+            "output": 5.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": true,
+            "reasoning": true,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "medium",
+            "high"
+          ],
           "released": "2025-06"
         },
         {
@@ -407,9 +1083,22 @@
           "family": "codestral",
           "contextWindow": 262144,
           "maxOutput": 32768,
-          "pricing": { "input": 0.3, "output": 0.9, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": false, "caching": false, "streaming": true },
-          "thinkingLevels": ["off"],
+          "pricing": {
+            "input": 0.3,
+            "output": 0.9,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
           "released": "2025-01"
         }
       ]
@@ -418,8 +1107,12 @@
       "id": "deepseek",
       "name": "DeepSeek",
       "baseUrl": "https://api.deepseek.com",
-      "auth": ["apiKey"],
-      "envVars": ["DEEPSEEK_API_KEY"],
+      "auth": [
+        "apiKey"
+      ],
+      "envVars": [
+        "DEEPSEEK_API_KEY"
+      ],
       "models": [
         {
           "id": "deepseek-chat",
@@ -427,9 +1120,22 @@
           "family": "deepseek",
           "contextWindow": 131072,
           "maxOutput": 8192,
-          "pricing": { "input": 0.28, "output": 0.42, "cacheRead": 0.028, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": false, "caching": true, "streaming": true },
-          "thinkingLevels": ["off"],
+          "pricing": {
+            "input": 0.28,
+            "output": 0.42,
+            "cacheRead": 0.028,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": false,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ],
           "released": "2025-12"
         },
         {
@@ -438,9 +1144,23 @@
           "family": "deepseek",
           "contextWindow": 131072,
           "maxOutput": 65536,
-          "pricing": { "input": 0.28, "output": 0.42, "cacheRead": 0.028, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": true, "caching": true, "streaming": true },
-          "thinkingLevels": ["medium", "high"],
+          "pricing": {
+            "input": 0.28,
+            "output": 0.42,
+            "cacheRead": 0.028,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": true,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "medium",
+            "high"
+          ],
           "released": "2025-12"
         }
       ]
@@ -449,9 +1169,13 @@
       "id": "ollama",
       "name": "Local (Ollama)",
       "baseUrl": "http://localhost:11434/v1",
-      "auth": ["none"],
-      "envVars": ["OLLAMA_HOST"],
-      "note": "Runs on this machine, so every price is zero. The base URL is user-supplied — override it in Preferences → Providers to point at another host. Model ids are whatever `ollama list` reports; the entries below are only a starting set.",
+      "auth": [
+        "none"
+      ],
+      "envVars": [
+        "OLLAMA_HOST"
+      ],
+      "note": "Runs on this machine, so every price is zero. The base URL is user-supplied \u2014 override it in Preferences \u2192 Providers to point at another host. Model ids are whatever `ollama list` reports; the entries below are only a starting set.",
       "models": [
         {
           "id": "gpt-oss:20b",
@@ -459,9 +1183,25 @@
           "family": "gpt-oss",
           "contextWindow": 131072,
           "maxOutput": 32768,
-          "pricing": { "input": 0.0, "output": 0.0, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": true, "caching": false, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high"]
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high"
+          ]
         },
         {
           "id": "qwen3:32b",
@@ -469,9 +1209,25 @@
           "family": "qwen",
           "contextWindow": 40960,
           "maxOutput": 8192,
-          "pricing": { "input": 0.0, "output": 0.0, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": true, "caching": false, "streaming": true },
-          "thinkingLevels": ["off", "low", "medium", "high"]
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": true,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off",
+            "low",
+            "medium",
+            "high"
+          ]
         },
         {
           "id": "llama3.3:70b",
@@ -479,9 +1235,22 @@
           "family": "llama",
           "contextWindow": 131072,
           "maxOutput": 8192,
-          "pricing": { "input": 0.0, "output": 0.0, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": false, "tools": true, "reasoning": false, "caching": false, "streaming": true },
-          "thinkingLevels": ["off"]
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": false,
+            "tools": true,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ]
         },
         {
           "id": "gemma3:27b",
@@ -489,9 +1258,22 @@
           "family": "gemma",
           "contextWindow": 131072,
           "maxOutput": 8192,
-          "pricing": { "input": 0.0, "output": 0.0, "cacheRead": 0.0, "cacheWrite": 0.0 },
-          "capabilities": { "vision": true, "tools": false, "reasoning": false, "caching": false, "streaming": true },
-          "thinkingLevels": ["off"]
+          "pricing": {
+            "input": 0.0,
+            "output": 0.0,
+            "cacheRead": 0.0,
+            "cacheWrite": 0.0
+          },
+          "capabilities": {
+            "vision": true,
+            "tools": false,
+            "reasoning": false,
+            "caching": false,
+            "streaming": true
+          },
+          "thinkingLevels": [
+            "off"
+          ]
         }
       ]
     }

@@ -40,7 +40,7 @@ pub fn estimate_tokens(text: &str) -> u64 {
 
 /// The base agent instructions. Fixed text, because it is fixed in a real session too — the
 /// cacheable prefix the harness models (spec 02 §6) is exactly this plus the tool schemas.
-const BASE_SYSTEM_PROMPT: &str = "\
+pub const BASE_SYSTEM_PROMPT: &str = "\
 You are a coding agent running inside form, a native macOS client. You work in a user's \
 codebase: you read files before changing them, you make the smallest change that solves the \
 problem, and you verify your work by running the project's own tests and linters.
@@ -222,7 +222,12 @@ pub fn context_usage_with(
     } else {
         0
     };
-    let output_reserve = model.map(|m| m.max_output).unwrap_or(0);
+    // Room set aside for the reply. Several models report `max_output == context_window`,
+    // and reserving the whole window pins the ring at 100% before a word is typed. A quarter
+    // of the window is the cap: enough to be a real warning, never the whole thing.
+    let output_reserve = model
+        .map(|m| m.max_output.min(m.context_window / 4))
+        .unwrap_or(0);
     let total = model.map(|m| m.context_window).unwrap_or(0);
 
     let segments = vec![

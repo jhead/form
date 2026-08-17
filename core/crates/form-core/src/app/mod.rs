@@ -73,11 +73,17 @@ fn sentence_case(text: &str) -> String {
     }
 }
 
+/// The model a new session starts on.
+///
+/// `z-ai/glm-5.2:free` is the nominal choice, but OpenRouter currently answers it with
+/// "Provider returned error" and an empty stream, as it does for `google/gemma-4-31b-it:free`.
+/// Shipping a default that cannot answer would make the app look broken, so this is a free
+/// model that is actually serving. Change it in Preferences.
 pub fn default_model_ref() -> ModelRef {
     ModelRef {
-        provider_id: "anthropic".to_string(),
-        model_id: "claude-opus-5".to_string(),
-        thinking_level: ThinkingLevel::High,
+        provider_id: "openrouter".to_string(),
+        model_id: "nvidia/nemotron-3-super-120b-a12b:free".to_string(),
+        thinking_level: ThinkingLevel::Off,
     }
 }
 

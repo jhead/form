@@ -21,7 +21,8 @@ use crate::catalog;
 use crate::context;
 use crate::error::{CoreError, Result};
 use crate::events::{EventBus, Listener};
-use crate::harness::{AbortSignal, Harness, RunContext, RunRequest, StubHarness};
+use crate::harness::pi::PiHarness;
+use crate::harness::{AbortSignal, Harness, RunContext, RunRequest};
 use crate::markdown;
 use crate::protocol::*;
 use crate::settings::{Settings, SettingsStore};
@@ -44,6 +45,8 @@ pub struct Core {
     settings_store: SettingsStore,
     settings: Mutex<Settings>,
     harness: Arc<dyn Harness>,
+    /// Projected from pi's registry once at startup. Replaces form's hand-written table.
+    catalog: crate::catalog::Catalog,
     bus: EventBus,
     runtime: Runtime,
     /// Live runs, keyed by session id, so `abortRun` can reach the right one.
@@ -69,6 +72,7 @@ impl Core {
 
         let settings_store = SettingsStore::new(&data_dir);
         let outcome = settings_store.load_reporting();
+        let mut harness_error: Option<String> = None;
         let pending_issue = outcome.issue.map(|issue| EventKind::Error {
             code: issue.code,
             message: issue.message,
@@ -81,6 +85,42 @@ impl Core {
             .thread_name("form-core")
             .build()
             .map_err(|e| CoreError::Internal(format!("tokio runtime: {e}")))?;
+
+        // A GUI app launched from Finder inherits no shell environment, so the key can only
+        // come from a file. Do this before the SDK is built; `pi-auth` reads the process env.
+        let env_file = crate::env::load(&data_dir).or_else(|| {
+            std::env::current_dir()
+                .ok()
+                .and_then(|cwd| crate::env::load(&cwd))
+        });
+        if let Some(path) = &env_file {
+            tracing::info!(path = %path.display(), "loaded credentials from .env");
+        }
+
+        // The real harness needs the network to resolve its catalog, so it is built on the
+        // runtime. A failure here is not fatal: the app still opens, and every run reports
+        // the reason rather than the window refusing to appear.
+        let (harness, catalog): (Arc<dyn Harness>, crate::catalog::Catalog) =
+            if config.harness == crate::protocol::HarnessKind::Stub {
+                (
+                    Arc::new(crate::harness::StubHarness),
+                    crate::catalog::builtin(),
+                )
+            } else {
+                match runtime.block_on(PiHarness::new(system_prompt_for(&outcome.settings))) {
+                    Ok(harness) => {
+                        tracing::info!(models = harness.model_count(), "pi harness ready");
+                        let catalog = harness.catalog();
+                        (Arc::new(harness), catalog)
+                    }
+                    Err(reason) => {
+                        // The window still opens and says why, rather than refusing to launch.
+                        tracing::error!(%reason, "pi harness unavailable");
+                        harness_error = Some(reason);
+                        (Arc::new(UnavailableHarness), crate::catalog::builtin())
+                    }
+                }
+            };
 
         // Loading the syntax set costs ~22 ms and is otherwise paid lazily by whichever
         // parse first sees a fenced code block — which, during a live run, is a dropped
@@ -95,12 +135,19 @@ impl Core {
             store,
             settings_store,
             settings: Mutex::new(outcome.settings),
-            harness: Arc::new(StubHarness),
+            harness,
+            catalog,
             bus: EventBus::new(),
             runtime,
             active: Arc::new(Mutex::new(HashMap::new())),
             queued: Arc::new(Mutex::new(HashMap::new())),
-            pending_issue: Mutex::new(pending_issue),
+            pending_issue: Mutex::new(pending_issue.or(harness_error.map(|message| {
+                EventKind::Error {
+                    code: "harness_unavailable".to_string(),
+                    message,
+                    detail: None,
+                }
+            }))),
         }))
     }
 
@@ -157,7 +204,7 @@ impl Core {
             )?),
 
             Query::GetSettings => Envelope::ok(self.settings_snapshot()),
-            Query::GetCatalog => Envelope::ok(catalog::builtin()),
+            Query::GetCatalog => Envelope::ok(self.catalog.clone()),
             Query::GetStats { range, tz } => {
                 Envelope::ok(stats::compute_at(&self.data_dir, range, &tz)?)
             }
@@ -179,8 +226,21 @@ impl Core {
 
     fn context_usage(&self, session_id: &str) -> Result<ContextUsage> {
         let session = self.store.get_session(session_id)?;
-        let model = catalog::resolve_ref(&session.summary.model_ref);
-        Ok(context::context_usage(&session, model))
+        Ok(context::context_usage(
+            &session,
+            self.model_of(&session.summary.model_ref),
+        ))
+    }
+
+    /// Look a session's model up in the live catalog.
+    fn model_of(&self, model_ref: &ModelRef) -> Option<&crate::catalog::Model> {
+        self.catalog
+            .providers
+            .iter()
+            .find(|p| p.id == model_ref.provider_id)?
+            .models
+            .iter()
+            .find(|m| m.id == model_ref.model_id)
     }
 
     /// Recompute and publish the ring (F10). Cheap enough to call on every turn boundary,
@@ -604,6 +664,43 @@ impl Core {
         });
 
         Ok(())
+    }
+}
+
+/// The system prompt the agent runs with. The user's own text replaces the default rather
+/// than appending to it, matching what the preferences pane says it does.
+fn system_prompt_for(settings: &Settings) -> String {
+    let configured = settings.defaults.system_prompt.trim();
+    if configured.is_empty() {
+        crate::context::BASE_SYSTEM_PROMPT.to_string()
+    } else {
+        configured.to_string()
+    }
+}
+
+/// Stands in when the SDK could not start. It answers every run with the reason instead of
+/// pretending to be an agent — the app must never show invented output.
+struct UnavailableHarness;
+
+#[async_trait::async_trait]
+impl Harness for UnavailableHarness {
+    async fn run(&self, req: RunRequest, ctx: Arc<dyn RunContext>, _abort: AbortSignal) {
+        ctx.emit(EventKind::RunStart {
+            session_id: req.session_id.clone(),
+            run_id: req.run_id.clone(),
+        });
+        ctx.emit(EventKind::Error {
+            code: "harness_unavailable".to_string(),
+            message: "The agent backend did not start. Check the log and your API key.".to_string(),
+            detail: None,
+        });
+        ctx.emit(EventKind::RunEnd {
+            session_id: req.session_id,
+            run_id: req.run_id,
+            outcome: crate::protocol::RunOutcome::Failed,
+            usage: Default::default(),
+            duration_ms: 0,
+        });
     }
 }
 

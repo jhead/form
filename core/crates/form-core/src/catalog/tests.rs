@@ -205,16 +205,24 @@ fn parse_ref_handles_slashes_colons_and_effort() {
 
 #[test]
 fn format_ref_round_trips() {
-    let original = default_ref();
+    // Pinned to a specific ref rather than whatever the default happens to be: formatting is
+    // what is under test, and it should not change when the shipped default model changes.
+    let original = ref_for("anthropic", "claude-opus-5");
     let formatted = format_ref(&original);
-    assert_eq!(formatted, "anthropic/claude-opus-5:high");
+    assert_eq!(formatted, "anthropic/claude-opus-5:off");
     assert_eq!(parse_ref(&formatted).unwrap(), original);
+
+    // A model id containing a slash still round-trips, which is the OpenRouter shape.
+    let free = ref_for("openrouter", "nvidia/nemotron-3-super-120b-a12b:free");
+    assert_eq!(parse_ref(&format_ref(&free)).unwrap(), free);
 }
 
 #[test]
 fn default_ref_resolves() {
+    // The name is deliberately not asserted: the default is a product decision that moves.
+    // What must hold is that the shipped default resolves in the offline fallback catalog and
+    // offers the effort it ships with, so a first launch with no network still has a model.
     let model = resolve(&default_ref()).expect("default model must exist");
-    assert_eq!(model.name, "Opus 5");
     assert!(model
         .thinking_levels
         .contains(&default_ref().thinking_level));
@@ -278,7 +286,8 @@ fn deprecated_models_sort_below_live_ones() {
 
 #[test]
 fn price_is_per_million_tokens() {
-    let opus = resolve(&default_ref()).unwrap();
+    // Pinned to a paid model: the default is a free one, and zero times anything is zero.
+    let opus = resolve(&ref_for("anthropic", "claude-opus-5")).unwrap();
     let usage = Usage {
         input: 1_000_000,
         output: 100_000,

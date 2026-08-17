@@ -24,6 +24,8 @@ pub const ABI_VERSION: u32 = 1;
 #[serde(rename_all = "camelCase")]
 pub struct CoreConfig {
     pub data_dir: String,
+    /// Populate a demo corpus. Off by default: the app talks to a real provider, and a
+    /// dashboard full of invented sessions would be indistinguishable from real history.
     #[serde(default)]
     pub seed_mock_data: bool,
     #[serde(default = "default_log_level")]
@@ -31,6 +33,19 @@ pub struct CoreConfig {
     /// Multiplier on stub-harness timings. 1.0 is human-realistic; tests use 100.0.
     #[serde(default = "default_speed")]
     pub harness_speed: f64,
+    /// Which harness answers prompts. `pi` is the real agent against a live provider and is
+    /// what the app ships with. `stub` is the deterministic generator, kept for tests and
+    /// previews so the suite does not depend on a network or a key.
+    #[serde(default)]
+    pub harness: HarnessKind,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum HarnessKind {
+    #[default]
+    Pi,
+    Stub,
 }
 
 fn default_log_level() -> String {

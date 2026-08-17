@@ -38,7 +38,7 @@ final class AppLaunch {
 
         do {
             let config = CoreConfig(
-                dataDir: CoreConfig.defaultDataDir(), seedMockData: true)
+                dataDir: CoreConfig.defaultDataDir(), seedMockData: false)
             let stores = try CoreStores(config: config)
             try await stores.start()
 
