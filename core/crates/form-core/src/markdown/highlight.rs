@@ -154,11 +154,16 @@ fn utf16_len(s: &str) -> u32 {
 // Language resolution
 // ---------------------------------------------------------------------------------------
 
-fn syntaxes() -> &'static SyntaxSet {
+/// `two-face` carries bat's curated syntax dump rather than syntect's defaults, which have
+/// no Swift, TypeScript, TOML, Kotlin, Dockerfile, Nix or Zig — languages a coding-agent
+/// client cannot afford to render as flat monospace.
+///
+/// `_newlines` because `ParseState` is fed lines with their terminators; the `_nonewlines`
+/// set silently mis-scopes multi-line constructs. Loading the dump is a one-time cost, so
+/// it stays behind a `OnceLock` and the app pays it before the first token arrives.
+pub(crate) fn syntaxes() -> &'static SyntaxSet {
     static SET: OnceLock<SyntaxSet> = OnceLock::new();
-    // `_newlines` because `ParseState` is fed lines with their terminators; the
-    // `_nonewlines` set silently mis-scopes multi-line constructs.
-    SET.get_or_init(SyntaxSet::load_defaults_newlines)
+    SET.get_or_init(two_face::syntax::extra_newlines)
 }
 
 fn resolve<'a>(set: &'a SyntaxSet, language: &str) -> Option<&'a SyntaxReference> {

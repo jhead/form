@@ -22,37 +22,12 @@ enum ThemeKind: String, CaseIterable, Sendable, CustomStringConvertible {
 ///   That check is a "somebody set the hairline to the background color" guard, not a WCAG
 ///   criterion; the dark anchor #33302C on #1A1917 measures 1.18:1 by design.
 ///
-/// Every pair that falls below its tier must be listed in `knownExceptions` with a reason,
-/// and a second test fails if an entry there has become unnecessary. That way the matrix
-/// cannot quietly regress and the exceptions cannot quietly accumulate.
+/// There are no carve-outs. Every pair below meets its tier unconditionally; if one ever
+/// does not, the palette moves, not the threshold.
 struct ContrastTests {
     static let bodyMinimum = 4.5
     static let largeMinimum = 3.0
     static let structuralMinimum = 1.15
-
-    /// Pairs the specified anchors cannot satisfy. Keep this list at zero-or-justified.
-    static let knownExceptions: [Exception] = [
-        Exception(
-            theme: "light",
-            foreground: "textInverted",
-            background: "accent",
-            floor: 4.0,
-            reason: """
-            White on the spec's light accent anchor #C15F3C measures 4.23:1 — the primary \
-            button's resting fill. Fixing it means moving the brand color to about #BA5636, \
-            which is a product decision, not a design-system one. Floored at 4.0 so it \
-            cannot drift further.
-            """
-        ),
-    ]
-
-    struct Exception: Sendable {
-        let theme: String
-        let foreground: String
-        let background: String
-        let floor: Double
-        let reason: String
-    }
 
     // MARK: Body text
 
@@ -187,64 +162,19 @@ struct ContrastTests {
         #expect(Set(series).count == series.count, "\(theme.id): chart series contains duplicates")
     }
 
-    // MARK: Exception hygiene
-
-    @Test("every documented exception is still necessary")
-    func exceptionsAreMinimal() throws {
-        for exception in Self.knownExceptions {
-            let theme = try #require(Theme.all.first { $0.id == exception.theme })
-            let fg = try #require(namedColor(exception.foreground, in: theme))
-            let bg = try #require(namedColor(exception.background, in: theme))
-            let ratio = fg.contrastRatio(against: bg)
-            #expect(
-                ratio < Self.bodyMinimum,
-                """
-                \(exception.theme): \(exception.foreground) on \(exception.background) now \
-                measures \(rounded(ratio)):1 and no longer needs an exception — delete it.
-                """
-            )
-        }
-    }
-
     // MARK: Helpers
 
     private func assertContrast(
         theme: Theme, fg: ThemeColor, fgName: String, bg: ThemeColor, bgName: String, tier: Double
     ) {
         let ratio = fg.contrastRatio(against: bg)
-        let exception = Self.knownExceptions.first {
-            $0.theme == theme.id && $0.foreground == fgName && $0.background == bgName
-        }
-        let floor = exception?.floor ?? tier
         #expect(
-            ratio >= floor,
+            ratio >= tier,
             """
             \(theme.id): \(fgName) on \(bgName) is \(rounded(ratio)):1, \
-            below the required \(floor):1\(exception == nil ? "" : " (documented exception)")
+            below the required \(tier):1
             """
         )
-    }
-
-    private func namedColor(_ name: String, in theme: Theme) -> ThemeColor? {
-        let table: [String: ThemeColor] = [
-            "background": theme.color.background,
-            "backgroundSidebar": theme.color.backgroundSidebar,
-            "surface": theme.color.surface,
-            "surfaceRaised": theme.color.surfaceRaised,
-            "surfaceSelected": theme.color.surfaceSelected,
-            "surfaceHover": theme.color.surfaceHover,
-            "textPrimary": theme.color.textPrimary,
-            "textSecondary": theme.color.textSecondary,
-            "textTertiary": theme.color.textTertiary,
-            "textInverted": theme.color.textInverted,
-            "accent": theme.color.accent,
-            "accentHover": theme.color.accentHover,
-            "success": theme.color.success,
-            "warning": theme.color.warning,
-            "danger": theme.color.danger,
-            "info": theme.color.info,
-        ]
-        return table[name]
     }
 
     private func rounded(_ value: Double) -> String {

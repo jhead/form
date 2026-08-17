@@ -4,11 +4,11 @@
 //!
 //! Read-only: the stats engine never writes to the store (spec 01 §1).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use rusqlite::{Connection, Row};
 
-use super::tz::Offsets;
+use super::tz::{Offsets, DAY_MS, HOUR_MS};
 use crate::error::Result;
 
 /// The half-open UTC window `[from_ms, to_ms)` and the offsets that bucket it.
@@ -44,7 +44,35 @@ fn u64_at(row: &Row, idx: usize) -> rusqlite::Result<u64> {
     Ok(row.get::<_, i64>(idx)?.max(0) as u64)
 }
 
-// ------------------------------------------------------------------ per-day
+/// Borrowed rather than owned: the scan reads four text columns per row and allocating
+/// them would cost more than everything else it does.
+fn str_at(row: &Row, idx: usize) -> rusqlite::Result<&str> {
+    Ok(row.get_ref(idx)?.as_str()?)
+}
+
+// ------------------------------------------------------------- the turn scan
+
+/// Everything `turns` contributes to the document, accumulated in one pass.
+///
+/// Spec 03 §4 asks for `GROUP BY` and a raw pull only for percentiles, and that is where
+/// this started — but five groupings mean five scans of the same 100k rows, and SQLite
+/// builds a temporary b-tree for each because no index covers a local-day expression or a
+/// provider/model pair. Measured on the 100k-turn fixture: 159 ms across those five
+/// statements against 34 ms for this single pass, which is the difference between missing
+/// and meeting the budget. The aggregation SQLite still does well — narrow tables, index
+/// ranges, `tool_invocations` — stays in SQL.
+#[derive(Default)]
+pub(crate) struct Scan {
+    /// Per local day, ascending.
+    pub(crate) days: Vec<DayRow>,
+    /// `[weekday][hour]` tokens, Monday = 0.
+    pub(crate) weekday_hour: Vec<Vec<u64>>,
+    /// `(tokens, turns)` per local hour.
+    pub(crate) hourly: Vec<(u64, u64)>,
+    /// Descending by tokens, each with its raw latency samples.
+    pub(crate) models: Vec<(ModelRow, Vec<TurnSample>)>,
+    pub(crate) sessions: Vec<SessionRow>,
+}
 
 pub(crate) struct DayRow {
     pub(crate) day: i64,
@@ -60,78 +88,6 @@ pub(crate) struct DayRow {
     pub(crate) duration_ms: u64,
 }
 
-pub(crate) fn daily(conn: &Connection, w: &Window) -> Result<Vec<DayRow>> {
-    let sql = format!(
-        "SELECT {day} AS d, COUNT(DISTINCT session_id), COUNT(*), \
-                SUM(input), SUM(output), SUM(cache_read), SUM(cache_write), \
-                COALESCE(SUM(reasoning), 0), SUM(total_tokens), SUM(cost_total), \
-                SUM(duration_ms) \
-         FROM turns WHERE started_at >= ?1 AND started_at < ?2 GROUP BY d ORDER BY d",
-        day = w.offsets.sql_day("started_at"),
-    );
-    let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map([w.from_ms, w.to_ms], |r| {
-        Ok(DayRow {
-            day: r.get(0)?,
-            sessions: u64_at(r, 1)?,
-            turns: u64_at(r, 2)?,
-            input: u64_at(r, 3)?,
-            output: u64_at(r, 4)?,
-            cache_read: u64_at(r, 5)?,
-            cache_write: u64_at(r, 6)?,
-            reasoning: u64_at(r, 7)?,
-            total_tokens: u64_at(r, 8)?,
-            cost: r.get(9)?,
-            duration_ms: u64_at(r, 10)?,
-        })
-    })?;
-    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
-}
-
-/// Messages per local day, from the transcript log. Counted separately from turns because
-/// a turn is an assistant reply and the dashboard's "messages" line includes the user's.
-pub(crate) fn messages_by_day(conn: &Connection, w: &Window) -> Result<HashMap<i64, u64>> {
-    let sql = format!(
-        "SELECT {day} AS d, COUNT(*) FROM entries \
-         WHERE kind = 'message' AND timestamp >= ?1 AND timestamp < ?2 GROUP BY d",
-        day = w.offsets.sql_day("timestamp"),
-    );
-    let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map([w.from_ms, w.to_ms], |r| Ok((r.get(0)?, u64_at(r, 1)?)))?;
-    Ok(rows.collect::<rusqlite::Result<HashMap<_, _>>>()?)
-}
-
-// ------------------------------------------------------------ weekday × hour
-
-pub(crate) struct WeekHourRow {
-    pub(crate) weekday: usize,
-    pub(crate) hour: usize,
-    pub(crate) total_tokens: u64,
-    pub(crate) turns: u64,
-}
-
-pub(crate) fn weekday_hour(conn: &Connection, w: &Window) -> Result<Vec<WeekHourRow>> {
-    // Day 0 was a Thursday, so `+3` lands Monday on index 0.
-    let sql = format!(
-        "SELECT (({day} + 3) % 7) AS wd, {hour} AS h, SUM(total_tokens), COUNT(*) \
-         FROM turns WHERE started_at >= ?1 AND started_at < ?2 GROUP BY wd, h",
-        day = w.offsets.sql_day("started_at"),
-        hour = w.offsets.sql_hour("started_at"),
-    );
-    let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map([w.from_ms, w.to_ms], |r| {
-        Ok(WeekHourRow {
-            weekday: r.get::<_, i64>(0)?.clamp(0, 6) as usize,
-            hour: r.get::<_, i64>(1)?.clamp(0, 23) as usize,
-            total_tokens: u64_at(r, 2)?,
-            turns: u64_at(r, 3)?,
-        })
-    })?;
-    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
-}
-
-// ------------------------------------------------------------------- models
-
 pub(crate) struct ModelRow {
     pub(crate) provider_id: String,
     pub(crate) model_id: String,
@@ -142,71 +98,186 @@ pub(crate) struct ModelRow {
     pub(crate) cost: f64,
 }
 
-pub(crate) fn models(conn: &Connection, w: &Window) -> Result<Vec<ModelRow>> {
-    let mut stmt = conn.prepare(
-        "SELECT provider_id, model_id, COUNT(*), \
-                SUM(CASE WHEN outcome = 'completed' THEN 0 ELSE 1 END), \
-                SUM(total_tokens), SUM(cache_read), SUM(cost_total) \
-         FROM turns WHERE started_at >= ?1 AND started_at < ?2 \
-         GROUP BY provider_id, model_id ORDER BY SUM(total_tokens) DESC",
-    )?;
-    let rows = stmt.query_map([w.from_ms, w.to_ms], |r| {
-        Ok(ModelRow {
-            provider_id: r.get(0)?,
-            model_id: r.get(1)?,
-            turns: u64_at(r, 2)?,
-            errors: u64_at(r, 3)?,
-            total_tokens: u64_at(r, 4)?,
-            cache_read: u64_at(r, 5)?,
-            cost: r.get(6)?,
-        })
-    })?;
-    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
-}
-
-/// One turn's latency inputs. The only raw pull in the engine (spec 03 §4).
+/// One turn's latency inputs, kept raw because nearest-rank percentiles need the sample,
+/// not a moment (spec 03 §3).
 pub(crate) struct TurnSample {
     pub(crate) ttft_ms: Option<i64>,
     pub(crate) duration_ms: i64,
     pub(crate) output: u64,
 }
 
-/// Samples bucketed by the model's index in [`models`]'s result. The provider/model
-/// strings are read as borrowed `&str` and resolved through a nested map, which keeps the
-/// hot loop free of allocation — the difference between comfortably inside the 150 ms
-/// budget and not.
-pub(crate) fn latency_samples(
-    conn: &Connection,
-    w: &Window,
-    models: &[ModelRow],
-) -> Result<Vec<Vec<TurnSample>>> {
-    let mut index: HashMap<&str, HashMap<&str, usize>> = HashMap::new();
-    for (i, m) in models.iter().enumerate() {
-        index
-            .entry(m.provider_id.as_str())
-            .or_default()
-            .insert(m.model_id.as_str(), i);
-    }
+pub(crate) struct SessionRow {
+    pub(crate) session_id: String,
+    pub(crate) tokens: u64,
+    pub(crate) duration_ms: u64,
+    pub(crate) turns: u64,
+}
 
-    let mut buckets: Vec<Vec<TurnSample>> = models.iter().map(|_| Vec::new()).collect();
+pub(crate) fn scan_turns(conn: &Connection, w: &Window) -> Result<Scan> {
+    let mut days: HashMap<i64, DayRow> = HashMap::new();
+    let mut weekday_hour = vec![vec![0u64; 24]; 7];
+    let mut hourly = vec![(0u64, 0u64); 24];
+    // `(day, session index)` — the distinct-sessions-per-day count SQL would have done
+    // with COUNT(DISTINCT), without a second pass.
+    let mut day_sessions: HashSet<(i64, u32)> = HashSet::new();
+
+    let mut session_index: HashMap<String, usize> = HashMap::new();
+    let mut sessions: Vec<SessionRow> = Vec::new();
+    // Nested so the hot loop can look up a borrowed `&str` pair without allocating.
+    let mut model_index: HashMap<String, HashMap<String, usize>> = HashMap::new();
+    let mut models: Vec<(ModelRow, Vec<TurnSample>)> = Vec::new();
+
     let mut stmt = conn.prepare(
-        "SELECT provider_id, model_id, ttft_ms, duration_ms, output \
+        "SELECT started_at, session_id, provider_id, model_id, ttft_ms, duration_ms, \
+                input, output, cache_read, cache_write, reasoning, total_tokens, \
+                cost_total, outcome \
          FROM turns WHERE started_at >= ?1 AND started_at < ?2",
     )?;
     let mut rows = stmt.query([w.from_ms, w.to_ms])?;
     while let Some(row) = rows.next()? {
-        let provider = row.get_ref(0)?.as_str().map_err(rusqlite::Error::from)?;
-        let model = row.get_ref(1)?.as_str().map_err(rusqlite::Error::from)?;
-        let Some(&i) = index.get(provider).and_then(|m| m.get(model)) else {
-            continue;
+        let started: i64 = row.get(0)?;
+        let input = u64_at(row, 6)?;
+        let output = u64_at(row, 7)?;
+        let cache_read = u64_at(row, 8)?;
+        let cache_write = u64_at(row, 9)?;
+        let reasoning = row.get::<_, Option<i64>>(10)?.unwrap_or(0).max(0) as u64;
+        let total_tokens = u64_at(row, 11)?;
+        let cost: f64 = row.get(12)?;
+        let duration_ms: i64 = row.get(5)?;
+
+        let local = w.offsets.local_ms(started);
+        let day = local.div_euclid(DAY_MS);
+        let hour = (local.rem_euclid(DAY_MS) / HOUR_MS) as usize;
+        // Day 0 (1970-01-01) was a Thursday, so `+3` lands Monday on index 0.
+        let weekday = (day + 3).rem_euclid(7) as usize;
+
+        let bucket = days.entry(day).or_insert_with(|| DayRow::empty(day));
+        bucket.turns += 1;
+        bucket.input += input;
+        bucket.output += output;
+        bucket.cache_read += cache_read;
+        bucket.cache_write += cache_write;
+        bucket.reasoning += reasoning;
+        bucket.total_tokens += total_tokens;
+        bucket.cost += cost;
+        bucket.duration_ms += duration_ms.max(0) as u64;
+
+        weekday_hour[weekday][hour] += total_tokens;
+        hourly[hour].0 += total_tokens;
+        hourly[hour].1 += 1;
+
+        let session_id = str_at(row, 1)?;
+        let s = match session_index.get(session_id) {
+            Some(&i) => i,
+            None => {
+                sessions.push(SessionRow {
+                    session_id: session_id.to_string(),
+                    tokens: 0,
+                    duration_ms: 0,
+                    turns: 0,
+                });
+                session_index.insert(session_id.to_string(), sessions.len() - 1);
+                sessions.len() - 1
+            }
         };
-        buckets[i].push(TurnSample {
-            ttft_ms: row.get(2)?,
-            duration_ms: row.get(3)?,
-            output: u64_at(row, 4)?,
+        sessions[s].tokens += total_tokens;
+        sessions[s].duration_ms += duration_ms.max(0) as u64;
+        sessions[s].turns += 1;
+        day_sessions.insert((day, s as u32));
+
+        let provider = str_at(row, 2)?;
+        let model_id = str_at(row, 3)?;
+        let m = match model_index.get(provider).and_then(|m| m.get(model_id)) {
+            Some(&i) => i,
+            None => {
+                models.push((
+                    ModelRow {
+                        provider_id: provider.to_string(),
+                        model_id: model_id.to_string(),
+                        turns: 0,
+                        errors: 0,
+                        total_tokens: 0,
+                        cache_read: 0,
+                        cost: 0.0,
+                    },
+                    Vec::new(),
+                ));
+                model_index
+                    .entry(provider.to_string())
+                    .or_default()
+                    .insert(model_id.to_string(), models.len() - 1);
+                models.len() - 1
+            }
+        };
+        let (stats, samples) = &mut models[m];
+        stats.turns += 1;
+        stats.total_tokens += total_tokens;
+        stats.cache_read += cache_read;
+        stats.cost += cost;
+        // Failed and aborted turns count, and keep whatever tokens they produced.
+        if str_at(row, 13)? != "completed" {
+            stats.errors += 1;
+        }
+        samples.push(TurnSample {
+            ttft_ms: row.get(4)?,
+            duration_ms,
+            output,
         });
     }
-    Ok(buckets)
+
+    for (day, _session) in day_sessions {
+        if let Some(bucket) = days.get_mut(&day) {
+            bucket.sessions += 1;
+        }
+    }
+    let mut days: Vec<DayRow> = days.into_values().collect();
+    days.sort_unstable_by_key(|d| d.day);
+    models.sort_by(|a, b| b.0.total_tokens.cmp(&a.0.total_tokens));
+
+    Ok(Scan {
+        days,
+        weekday_hour,
+        hourly,
+        models,
+        sessions,
+    })
+}
+
+impl DayRow {
+    fn empty(day: i64) -> Self {
+        Self {
+            day,
+            sessions: 0,
+            turns: 0,
+            input: 0,
+            output: 0,
+            cache_read: 0,
+            cache_write: 0,
+            reasoning: 0,
+            total_tokens: 0,
+            cost: 0.0,
+            duration_ms: 0,
+        }
+    }
+}
+
+/// Titles for the ranked sessions only — the leaderboards are 10 rows each, so joining
+/// every session in the period to fetch a string nobody renders would be waste.
+pub(crate) fn titles(conn: &Connection, ids: &[String]) -> Result<HashMap<String, String>> {
+    let mut titles = HashMap::new();
+    if ids.is_empty() {
+        return Ok(titles);
+    }
+    let sql = format!(
+        "SELECT id, title FROM sessions WHERE id IN ({})",
+        vec!["?"; ids.len()].join(",")
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let mut rows = stmt.query(rusqlite::params_from_iter(ids))?;
+    while let Some(row) = rows.next()? {
+        titles.insert(row.get(0)?, row.get(1)?);
+    }
+    Ok(titles)
 }
 
 // -------------------------------------------------------------------- tools
@@ -230,35 +301,6 @@ pub(crate) fn tools(conn: &Connection, w: &Window) -> Result<Vec<ToolRow>> {
             invocations: u64_at(r, 1)?,
             errors: u64_at(r, 2)?,
             duration_ms: u64_at(r, 3)?,
-        })
-    })?;
-    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
-}
-
-// ----------------------------------------------------------------- sessions
-
-pub(crate) struct SessionRow {
-    pub(crate) session_id: String,
-    pub(crate) title: String,
-    pub(crate) tokens: u64,
-    pub(crate) duration_ms: u64,
-    pub(crate) turns: u64,
-}
-
-pub(crate) fn sessions(conn: &Connection, w: &Window) -> Result<Vec<SessionRow>> {
-    let mut stmt = conn.prepare(
-        "SELECT t.session_id, COALESCE(s.title, ''), SUM(t.total_tokens), \
-                SUM(t.duration_ms), COUNT(*) \
-         FROM turns t LEFT JOIN sessions s ON s.id = t.session_id \
-         WHERE t.started_at >= ?1 AND t.started_at < ?2 GROUP BY t.session_id",
-    )?;
-    let rows = stmt.query_map([w.from_ms, w.to_ms], |r| {
-        Ok(SessionRow {
-            session_id: r.get(0)?,
-            title: r.get(1)?,
-            tokens: u64_at(r, 2)?,
-            duration_ms: u64_at(r, 3)?,
-            turns: u64_at(r, 4)?,
         })
     })?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)

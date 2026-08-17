@@ -11,14 +11,15 @@ public struct SpacingScale: Sendable, Equatable, Codable {
     public var xl: CGFloat = 16
     public var xxl: CGFloat = 20
     public var xxxl: CGFloat = 24
-    public var xxxxl: CGFloat = 32
-    public var xxxxxl: CGFloat = 40
-    public var xxxxxxl: CGFloat = 48
+    // Past `xxxl` the x-prefixes stop being readable, so the top of the ladder is numbered.
+    public var xl2: CGFloat = 32
+    public var xl3: CGFloat = 40
+    public var xl4: CGFloat = 48
 
     public static let standard = SpacingScale()
     public init() {}
 
-    public var all: [CGFloat] { [xxs, xs, sm, md, lg, xl, xxl, xxxl, xxxxl, xxxxxl, xxxxxxl] }
+    public var all: [CGFloat] { [xxs, xs, sm, md, lg, xl, xxl, xxxl, xl2, xl3, xl4] }
 }
 
 /// Corner radii (spec 08 §2.3).

@@ -25,7 +25,7 @@ struct ThemeTests {
     @Test("colors encode as hex, not as component objects")
     func colorsEncodeAsHex() throws {
         let data = try JSONEncoder().encode(Theme.light.color.accent)
-        #expect(String(data: data, encoding: .utf8) == "\"#C15F3C\"")
+        #expect(String(data: data, encoding: .utf8) == "\"#BA5636\"")
     }
 
     @Test("hex parsing handles the three widths and rejects garbage")

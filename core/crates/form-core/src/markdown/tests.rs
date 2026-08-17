@@ -851,3 +851,22 @@ fn unchanged_code_blocks_are_not_rehighlighted() {
     let b = first_code_block(&second).tokens;
     assert_eq!(a, b, "the memoized tokens are byte-identical");
 }
+
+#[test]
+fn probe_resolution() {
+    let set = highlight::syntaxes();
+    for l in [
+        "ts","typescript","tsx","js","javascript","jsx","mjs","cjs","node","sh","zsh","bash",
+        "shell","console","shell-session","ksh","yml","yaml","objc","objective-c","obj-c",
+        "objcpp","objective-c++","c++","cpp","cxx","cc","hpp","hxx","c#","csharp","cs","rust",
+        "rs","python","python3","py3","py","ruby","rb","golang","go","kotlin","kt","markdown",
+        "md","jsonc","json5","json","htm","html","dockerfile","docker","make","mk","makefile",
+        "swift","toml","nix","zig","css","scss","less","sql","java","php","perl","lua","r",
+        "scala","haskell","hs","elixir","ex","erlang","clojure","graphql","proto","vim","ps1",
+        "powershell","diff","xml","text","plaintext","txt","vue","svelte","ini","cmake","dart",
+        "groovy","tf","terraform","asm","fish","nu","julia","ocaml","fsharp","vb","matlab",
+    ] {
+        let direct = set.find_syntax_by_token(l).map(|s| s.name.clone());
+        println!("{l:16} direct={direct:?}");
+    }
+}

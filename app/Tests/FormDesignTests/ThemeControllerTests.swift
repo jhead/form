@@ -64,6 +64,43 @@ struct ThemeControllerTests {
         #expect(ThemeMode.system.toggled != .system)
     }
 
+    /// The Appearance tab binds a `Picker` and a `Slider` to these; a binding that wrote the
+    /// stored property directly would leave `theme` stale.
+    @Test("bindings rebuild the resolved theme, not just the stored value")
+    func bindingsRebuildTheTheme() {
+        let controller = ThemeController(mode: .light)
+
+        controller.modeBinding.wrappedValue = .dark
+        #expect(controller.mode == .dark)
+        #expect(controller.theme.id == "dark")
+        #expect(controller.modeBinding.wrappedValue == .dark)
+
+        controller.textScaleBinding.wrappedValue = 1.2
+        #expect(controller.textScale == 1.2)
+        #expect(controller.theme.typography.body.size == 14 * 1.2)
+        #expect(controller.textScaleBinding.wrappedValue == 1.2)
+
+        // Clamping applies through the binding too, so a slider cannot exceed the range.
+        controller.textScaleBinding.wrappedValue = 99
+        #expect(controller.textScale == TypeTokens.maximumScale)
+    }
+
+    @Test("the published ladder is what the keyboard steps through")
+    func ladderMatchesStepping() {
+        let ladder = ThemeController.textScaleLadder
+        #expect(ladder.first == TypeTokens.minimumScale)
+        #expect(ladder.last == TypeTokens.maximumScale)
+        #expect(ladder.contains(1.0))
+        #expect(zip(ladder, ladder.dropFirst()).allSatisfy { $0 < $1 })
+
+        let controller = ThemeController(mode: .light)
+        controller.setTextScale(ladder[0])
+        for expected in ladder.dropFirst() {
+            controller.stepTextScale(1)
+            #expect(controller.textScale == expected)
+        }
+    }
+
     @Test("the resolved theme carries a device-pixel hairline")
     func hairlineIsResolved() {
         let controller = ThemeController(mode: .light)

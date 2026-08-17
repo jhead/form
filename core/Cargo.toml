@@ -26,6 +26,10 @@ chrono-tz = "0.10"
 rusqlite = { version = "0.32", features = ["bundled"] }
 pulldown-cmark = { version = "0.12", default-features = false, features = ["html"] }
 syntect = { version = "5", default-features = false, features = ["default-fancy"] }
+# syntect's bundled set has no Swift, TypeScript, TOML, Kotlin or Dockerfile grammar. For a
+# Swift coding-agent client, unhighlighted Swift is a visible miss; two-face carries bat's
+# curated syntax dump. Feature must track syntect's regex engine above.
+two-face = { version = "0.4", default-features = false, features = ["syntect-default-fancy"] }
 rand = "0.8"
 rand_chacha = "0.3"
 sha2 = "0.10"

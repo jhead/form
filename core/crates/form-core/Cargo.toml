@@ -21,6 +21,7 @@ chrono-tz.workspace = true
 rusqlite.workspace = true
 pulldown-cmark.workspace = true
 syntect.workspace = true
+two-face.workspace = true
 rand.workspace = true
 rand_chacha.workspace = true
 sha2.workspace = true

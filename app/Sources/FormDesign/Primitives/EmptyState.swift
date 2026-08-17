@@ -56,7 +56,7 @@ public struct EmptyState<Action: View>: View {
 
             action
         }
-        .padding(isCompact ? theme.metrics.spacing.xl : theme.metrics.spacing.xxxxl)
+        .padding(isCompact ? theme.metrics.spacing.xl : theme.metrics.spacing.xl2)
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
     }

@@ -80,7 +80,7 @@ public final class ThemeController {
     /// `⌘+` / `⌘-`. Steps through the ladder rather than by a fixed delta so the ends land
     /// exactly on the clamp values.
     public func stepTextScale(_ direction: Int) {
-        let ladder: [CGFloat] = [0.85, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4]
+        let ladder = Self.textScaleLadder
         let current = ladder.enumerated().min { a, b in
             abs(a.element - textScale) < abs(b.element - textScale)
         }?.offset ?? 2
@@ -93,6 +93,24 @@ public final class ThemeController {
 
     /// `⌘⇧D`.
     public func toggleAppearance() { setMode(mode.toggled) }
+
+    // MARK: Bindings
+    //
+    // The Appearance preferences tab (spec 13) drives a `Picker` and a `Slider`, both of
+    // which want a `Binding`. These route writes through the setters above so the resolved
+    // theme is always rebuilt — never bind to the stored properties directly.
+
+    public var modeBinding: Binding<ThemeMode> {
+        Binding(get: { self.mode }, set: { self.setMode($0) })
+    }
+
+    public var textScaleBinding: Binding<CGFloat> {
+        Binding(get: { self.textScale }, set: { self.setTextScale($0) })
+    }
+
+    /// The discrete steps `⌘+` / `⌘-` walk, exposed so the preferences slider can snap to the
+    /// same values the keyboard produces.
+    public static let textScaleLadder: [CGFloat] = [0.85, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4]
 
     /// Rebuilds the resolved theme. Safe to call redundantly — it assigns only on change,
     /// so it will not churn `@Observable` dependents.

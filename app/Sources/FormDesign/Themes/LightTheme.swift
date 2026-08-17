@@ -20,9 +20,14 @@ private enum Light {
     // floor for any text at all. Darkened the minimum needed to clear 3:1 on every surface.
     static let textTertiary = ThemeColor(hex: "#8A867E")
 
-    static let accent = ThemeColor(hex: "#C15F3C")
-    static let accentHover = ThemeColor(hex: "#A94E2E")
-    static let accentMuted = ThemeColor(hex: "#F0DDD4")
+    // Spec 08 §2.1 anchored the accent at #C15F3C, which carries white at only 4.23:1 —
+    // and white-on-accent is the resting state of the primary button, the app's highest
+    // traffic text-on-color pair. Darkened to the nearest value that clears 4.5:1 (4.71:1).
+    // `accentHover` is a further step down the same ramp; `accentMuted` is the accent laid
+    // over the background at 22 %.
+    static let accent = ThemeColor(hex: "#BA5636")
+    static let accentHover = ThemeColor(hex: "#9E4529")
+    static let accentMuted = ThemeColor(hex: "#F0DAD3")
 
     static let success = ThemeColor(hex: "#3F7D4E")
     static let warning = ThemeColor(hex: "#A16A0D")

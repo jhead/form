@@ -896,3 +896,128 @@ fn seed_synthetic(conn: &Connection, turns: usize) {
     }
     conn.execute_batch("COMMIT").unwrap();
 }
+
+#[test]
+#[ignore = "measurement aid, not an assertion"]
+fn perf_breakdown() {
+    let conn = db();
+    seed_synthetic(&conn, 100_000);
+    let now = now_ms();
+    let offsets = Offsets::build(NY, days_ago(NY, 400), now + DAY_MS);
+    let today = offsets.day(now);
+    let w = Window {
+        from_ms: offsets.day_start_utc(today - 400).max(0),
+        to_ms: offsets.day_start_utc(today + 1),
+        offsets,
+    };
+    macro_rules! t {
+        ($label:expr, $e:expr) => {{
+            let s = Instant::now();
+            let out = $e;
+            println!("{:>22}: {:?}", $label, s.elapsed());
+            out
+        }};
+    }
+    let _ = t!("daily", query::daily(&conn, &w).unwrap());
+    let _ = t!("messages", query::messages_by_day(&conn, &w).unwrap());
+    let _ = t!("weekday_hour", query::weekday_hour(&conn, &w).unwrap());
+    let models = t!("models", query::models(&conn, &w).unwrap());
+    let _ = t!("latency_samples", query::latency_samples(&conn, &w, &models).unwrap());
+    let _ = t!("tools", query::tools(&conn, &w).unwrap());
+    let _ = t!("sessions", query::sessions(&conn, &w).unwrap());
+    let _ = t!("active_days", query::active_days_all_time(&conn, &w.offsets).unwrap());
+    let _ = t!("trailing", query::trailing_cost(&conn, &w.offsets, 0).unwrap());
+
+    conn.execute_batch("PRAGMA temp_store = MEMORY; PRAGMA cache_size = -65536;").unwrap();
+    println!("-- with temp_store=MEMORY, 64MB cache --");
+    let _ = t!("daily", query::daily(&conn, &w).unwrap());
+    let _ = t!("messages", query::messages_by_day(&conn, &w).unwrap());
+    let _ = t!("weekday_hour", query::weekday_hour(&conn, &w).unwrap());
+    let models = t!("models", query::models(&conn, &w).unwrap());
+    let _ = t!("latency_samples", query::latency_samples(&conn, &w, &models).unwrap());
+    let _ = t!("sessions", query::sessions(&conn, &w).unwrap());
+
+    println!("-- merged cube --");
+    let day = w.offsets.sql_day("started_at");
+    let hour = w.offsets.sql_hour("started_at");
+    let cube = format!(
+        "SELECT {day} AS d, {hour} AS h, provider_id, model_id, COUNT(*), \
+                SUM(CASE WHEN outcome = 'completed' THEN 0 ELSE 1 END), \
+                SUM(input), SUM(output), SUM(cache_read), SUM(cache_write), \
+                COALESCE(SUM(reasoning),0), SUM(total_tokens), SUM(cost_total), SUM(duration_ms) \
+         FROM turns WHERE started_at >= ?1 AND started_at < ?2 GROUP BY d, h, provider_id, model_id"
+    );
+    let s = Instant::now();
+    let mut stmt = conn.prepare(&cube).unwrap();
+    let n = stmt
+        .query_map([w.from_ms, w.to_ms], |r| {
+            let _: i64 = r.get(0)?;
+            let _: i64 = r.get(1)?;
+            let _: String = r.get(2)?;
+            let _: String = r.get(3)?;
+            let _: i64 = r.get(11)?;
+            Ok(())
+        })
+        .unwrap()
+        .count();
+    println!("{:>22}: {:?} ({n} rows)", "cube", s.elapsed());
+
+    let sess = format!(
+        "SELECT t.session_id, {day} AS d, SUM(t.total_tokens), SUM(t.duration_ms), COUNT(*) \
+         FROM turns t WHERE t.started_at >= ?1 AND t.started_at < ?2 GROUP BY t.session_id, d"
+    );
+    let s = Instant::now();
+    let mut stmt = conn.prepare(&sess).unwrap();
+    let n = stmt
+        .query_map([w.from_ms, w.to_ms], |r| {
+            let _: String = r.get(0)?;
+            let _: i64 = r.get(1)?;
+            Ok(())
+        })
+        .unwrap()
+        .count();
+    println!("{:>22}: {:?} ({n} rows)", "session×day", s.elapsed());
+
+    println!("-- single raw pass over turns --");
+    let raw = format!(
+        "SELECT started_at, session_id, provider_id, model_id, ttft_ms, duration_ms, \
+                input, output, cache_read, cache_write, COALESCE(reasoning,0), \
+                total_tokens, cost_total, outcome \
+         FROM turns WHERE started_at >= ?1 AND started_at < ?2"
+    );
+    let s = Instant::now();
+    let mut stmt = conn.prepare(&raw).unwrap();
+    let mut rows = stmt.query([w.from_ms, w.to_ms]).unwrap();
+    let mut days: std::collections::HashMap<i64, [u64; 8]> = std::collections::HashMap::new();
+    let mut sess: std::collections::HashMap<String, [u64; 3]> = std::collections::HashMap::new();
+    let mut mods: std::collections::HashMap<(String, String), [u64; 5]> = std::collections::HashMap::new();
+    let mut n = 0u64;
+    while let Some(r) = rows.next().unwrap() {
+        let started: i64 = r.get(0).unwrap();
+        let sid = r.get_ref(1).unwrap().as_str().unwrap();
+        let provider = r.get_ref(2).unwrap().as_str().unwrap();
+        let model = r.get_ref(3).unwrap().as_str().unwrap();
+        let _ttft: Option<i64> = r.get(4).unwrap();
+        let _dur: i64 = r.get(5).unwrap();
+        let input: i64 = r.get(6).unwrap();
+        let output: i64 = r.get(7).unwrap();
+        let cr: i64 = r.get(8).unwrap();
+        let cw: i64 = r.get(9).unwrap();
+        let _re: i64 = r.get(10).unwrap();
+        let total: i64 = r.get(11).unwrap();
+        let _cost: f64 = r.get(12).unwrap();
+        let outcome = r.get_ref(13).unwrap().as_str().unwrap();
+        let d = w.offsets.day(started);
+        let e = days.entry(d).or_default();
+        e[0] += 1; e[1] += input as u64; e[2] += output as u64; e[3] += cr as u64;
+        e[4] += cw as u64; e[5] += total as u64;
+        if let Some(v) = sess.get_mut(sid) { v[0] += total as u64; v[2] += 1; }
+        else { sess.insert(sid.to_string(), [total as u64, 0, 1]); }
+        let key = (provider, model);
+        if let Some(v) = mods.get_mut(&(key.0.to_string(), key.1.to_string())) { v[0] += 1; }
+        else { mods.insert((key.0.to_string(), key.1.to_string()), [1, 0, 0, 0, 0]); }
+        if outcome != "completed" { n += 1; }
+    }
+    println!("{:>22}: {:?} ({} days, {} sessions, {} models, {n} errors)",
+             "raw + rust agg", s.elapsed(), days.len(), sess.len(), mods.len());
+}
