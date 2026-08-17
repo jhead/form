@@ -222,6 +222,17 @@ struct AppCommandTableTests {
         #expect(missing.isEmpty, Comment(rawValue: missing.joined(separator: "\n")))
     }
 
+    /// A path relative to the package root, resilient to symlinked checkout locations.
+    /// Falls back to the last three components, which is enough to identify a source file.
+    static func repoRelativePath(of file: URL, under root: URL) -> String {
+        let resolvedFile = file.resolvingSymlinksInPath().path
+        let resolvedRoot = root.resolvingSymlinksInPath().path + "/"
+        if resolvedFile.hasPrefix(resolvedRoot) {
+            return String(resolvedFile.dropFirst(resolvedRoot.count))
+        }
+        return file.pathComponents.suffix(3).joined(separator: "/")
+    }
+
     // MARK: - One table, enforced
 
     /// F12.3: "Shortcuts are declared in one table consumed by both menus and handlers — no
@@ -238,8 +249,12 @@ struct AppCommandTableTests {
             let url = root.appending(path: directory)
             guard FileManager.default.fileExists(atPath: url.path) else { continue }
             for file in try Self.swiftFiles(in: url) {
-                let relative = file.path.replacingOccurrences(of: root.path + "/", with: "")
-                guard !allowed.contains(relative) else { continue }
+                // Compare by path *suffix*, not by stripping a prefix. `/tmp` is a symlink
+                // to `/private/tmp`, so a checkout there resolves the file and the root
+                // differently, the prefix fails to strip, and the allowlist stops matching —
+                // which turned a clean clone into a red build.
+                let relative = Self.repoRelativePath(of: file, under: root)
+                guard !allowed.contains(where: { relative.hasSuffix($0) }) else { continue }
                 scanned += 1
                 let source = try String(contentsOf: file, encoding: .utf8)
                 for (index, line) in source.components(separatedBy: .newlines).enumerated() {
