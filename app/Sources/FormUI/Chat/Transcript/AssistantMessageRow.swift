@@ -10,7 +10,11 @@ import FormMarkdown
 /// debounced, so a 450-line response reparses tens of times, not hundreds (spec 10 §2), and
 /// `MarkdownView` re-renders only the blocks whose ids changed (spec 11 §4).
 struct AssistantMessageRow: View, Equatable {
-    @Environment(\.theme) private var theme
+    /// Passed in rather than read from the environment, because this row is `.equatable()`:
+    /// the theme has to be part of the value being compared or a re-render on an appearance
+    /// switch would be skipped as a no-op. `TranscriptView` also keys the row's *identity* on
+    /// the theme — see the comment there for why both are needed.
+    let theme: Theme
 
     let entry: Entry
     let message: AssistantMessage
@@ -101,6 +105,6 @@ struct AssistantMessageRow: View, Equatable {
     /// responses from re-rendering itself token by token (spec 10 §2).
     nonisolated static func == (a: AssistantMessageRow, b: AssistantMessageRow) -> Bool {
         a.entry.id == b.entry.id && a.isStreaming == b.isStreaming && a.effort == b.effort
-            && a.editor == b.editor && a.message == b.message
+            && a.editor == b.editor && a.theme == b.theme && a.message == b.message
     }
 }

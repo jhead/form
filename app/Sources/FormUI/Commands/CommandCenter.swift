@@ -69,7 +69,7 @@ public final class CommandCenter {
         self.theme = theme
         self.state = state
         resolver = ShortcutResolver(
-            commands: commands, overrides: stores.settings.settings.shortcuts ?? [:])
+            commands: commands, overrides: stores.settings.settings.shortcuts)
         registerBuiltInEscapeResponders()
     }
 

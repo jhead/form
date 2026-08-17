@@ -195,12 +195,10 @@ public enum AppCommands {
             keywords: ["dark", "light", "theme", "mode"]
         ) { context in
             // The controller repaints now; the settings write is what survives a relaunch.
-            // `FormDesign.ThemeMode` (a closed enum) and `FormCore.ThemeMode` (an open
-            // protocol value) are separate types on purpose — the wire format has to tolerate
-            // a mode this build does not know. They meet here, on their raw value.
+            // `.core` is W9's bridge between the closed `FormDesign.ThemeMode` and the open
+            // `FormCore.ThemeMode` — one conversion in the app, not one per caller.
             context.theme.toggleAppearance()
-            try? await context.stores.settings.setThemeMode(
-                FormCore.ThemeMode(context.theme.mode.rawValue))
+            try? await context.stores.settings.setThemeMode(context.theme.mode.core)
         },
 
         AppCommand(
@@ -325,8 +323,12 @@ public enum AppCommands {
             },
         ]
 
-        // `⌘1`–`⌘9` index the sidebar's flattened visible order, which is why the rows carry
-        // rank numbers (F2.1).
+        // `⌘1`–`⌘9` index the sidebar's flattened *visible* order, which is why the rows
+        // carry rank numbers (F2.1). Resolved through `SidebarOrder`, not
+        // `SessionStore.session(rank:)`: the store sorts by pinned-then-`updatedAt`, which
+        // discards the core's dense manual `index` and would make a dragged session snap
+        // back. `SidebarOrder` is what the user is actually looking at, collapsed groups
+        // included, so it is the only correct thing for a numbered jump to index into.
         for rank in 1...9 {
             commands.append(
                 AppCommand(
@@ -336,9 +338,13 @@ public enum AppCommands {
                     defaultKey: KeyBinding(Character("\(rank)"), .command),
                     systemImage: "\(rank).square",
                     keywords: ["jump", "rank", "sidebar"],
-                    isEnabled: { $0.stores.sessions.session(rank: rank) != nil }
+                    isEnabled: {
+                        SidebarOrder.session(rank: rank, in: $0.stores.sessions) != nil
+                    }
                 ) { context in
-                    guard let target = context.stores.sessions.session(rank: rank) else { return }
+                    guard
+                        let target = SidebarOrder.session(rank: rank, in: context.stores.sessions)
+                    else { return }
                     context.state.showSession(target.id)
                     await context.stores.select(target.id)
                 })

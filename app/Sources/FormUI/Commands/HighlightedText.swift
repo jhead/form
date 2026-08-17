@@ -9,6 +9,10 @@ import SwiftUI
 /// the whole reason the core hands back ranges instead of markup. The text is assembled by
 /// concatenating runs rather than by converting offsets into `AttributedString` indices,
 /// because run concatenation cannot silently land on the wrong grapheme.
+///
+/// The offsets themselves go through `HighlightGeometry`, which is what makes a range that
+/// has gone stale against the text — mid-emoji, past the end, reversed — a duller highlight
+/// rather than a crash or a hole in the string.
 public struct HighlightedText: View {
     @Environment(\.theme) private var theme
 
@@ -70,54 +74,45 @@ public struct HighlightedText: View {
         }
     }
 
-    /// Splits `text` into alternating plain and matched runs. Ranges are clamped, sorted and
-    /// merged first, so overlapping or out-of-bounds input from a stale index degrades into
-    /// plain text instead of crashing.
+    /// Splits `text` into alternating plain and matched runs.
+    ///
+    /// Total by construction: the segments always concatenate back to `text`, whatever the
+    /// ranges say. `HighlightGeometry` has already clamped, snapped and merged them, so the
+    /// only thing left here is the walk.
     static func segments(of text: String, ranges: [HighlightRange]) -> [Segment] {
-        let total = text.utf16.count
-        let merged = merge(ranges, limit: total)
-        guard !merged.isEmpty else { return [Segment(text: text, isMatch: false, start: 0, length: total)] }
+        let geometry = HighlightGeometry(text)
+        let spans = geometry.spans(for: ranges)
+        guard !spans.isEmpty else {
+            return [Segment(text: text, isMatch: false, start: 0, length: geometry.utf16Count)]
+        }
 
         var segments: [Segment] = []
-        var cursor = 0
-        for range in merged {
-            if range.start > cursor, let plain = substring(text, from: cursor, to: range.start) {
+        var cursor = 0  // a boundary index, never a raw offset
+        for span in spans {
+            if span.lower > cursor {
                 segments.append(
-                    Segment(text: plain, isMatch: false, start: cursor, length: range.start - cursor))
+                    geometry.segment(from: cursor, to: span.lower, isMatch: false))
             }
-            if let match = substring(text, from: range.start, to: range.start + range.len) {
-                segments.append(
-                    Segment(text: match, isMatch: true, start: range.start, length: range.len))
-            }
-            cursor = range.start + range.len
+            segments.append(geometry.segment(from: span.lower, to: span.upper, isMatch: true))
+            cursor = span.upper
         }
-        if cursor < total, let tail = substring(text, from: cursor, to: total) {
-            segments.append(Segment(text: tail, isMatch: false, start: cursor, length: total - cursor))
+        if cursor < geometry.boundaryCount - 1 {
+            segments.append(
+                geometry.segment(from: cursor, to: geometry.boundaryCount - 1, isMatch: false))
         }
         return segments
     }
+}
 
-    static func merge(_ ranges: [HighlightRange], limit: Int) -> [HighlightRange] {
-        let clamped = ranges
-            .map { HighlightRange(start: max(0, min($0.start, limit)), len: max(0, $0.len)) }
-            .map { HighlightRange(start: $0.start, len: min($0.len, limit - $0.start)) }
-            .filter { $0.len > 0 }
-            .sorted { $0.start < $1.start }
-
-        var merged: [HighlightRange] = []
-        for range in clamped {
-            if let last = merged.last, range.start <= last.start + last.len {
-                let end = max(last.start + last.len, range.start + range.len)
-                merged[merged.count - 1] = HighlightRange(start: last.start, len: end - last.start)
-            } else {
-                merged.append(range)
-            }
-        }
-        return merged
-    }
-
-    private static func substring(_ text: String, from: Int, to: Int) -> String? {
-        HighlightRange(start: from, len: to - from).range(in: text).map { String(text[$0]) }
+private extension HighlightGeometry {
+    func segment(from lower: Int, to upper: Int, isMatch: Bool) -> HighlightedText.Segment {
+        let span = Span(lower: lower, upper: upper)
+        let start = utf16Offset(of: lower)
+        return HighlightedText.Segment(
+            text: substring(span),
+            isMatch: isMatch,
+            start: start,
+            length: utf16Offset(of: upper) - start)
     }
 }
 

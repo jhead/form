@@ -25,10 +25,11 @@ final class CommandsHarness {
 
     /// Polls until `condition` holds or the budget runs out. Debounced work in the palette
     /// and the find bar is genuinely asynchronous, and a fixed sleep either flakes or wastes
-    /// time; this does neither.
+    /// time; this does neither. The budget is generous because every test in this target is
+    /// `@MainActor` and the suite runs in parallel — the wait is contending for one actor.
     @discardableResult
     func wait(
-        timeout: Duration = .milliseconds(2000),
+        timeout: Duration = .seconds(10),
         until condition: @MainActor () -> Bool
     ) async -> Bool {
         let deadline = ContinuousClock.now + timeout

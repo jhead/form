@@ -150,7 +150,7 @@ struct CostTab: View {
 
     private var providerRows: [RankedBarRow] {
         let names = Dictionary(
-            stats.providers.map { ($0.providerId, $0.name) }, uniquingKeysWith: { first, _ in first })
+            stats.providers.map { ($0.providerId, $0.displayName) }, uniquingKeysWith: { first, _ in first })
         return stats.cost.byProvider.sorted { $0.cost > $1.cost }.enumerated().map { index, entry in
             let name = names[entry.key].flatMap { $0.isEmpty ? nil : $0 }
             return RankedBarRow(

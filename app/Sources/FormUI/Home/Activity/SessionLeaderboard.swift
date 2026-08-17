@@ -35,7 +35,7 @@ struct SessionLeaderboard: View {
 
         func value(_ rank: SessionRank) -> String {
             switch self {
-            case .tokens: StatsFormat.abbreviated(rank.totalTokens)
+            case .tokens: StatsFormat.abbreviated(rank.tokens)
             case .duration: StatsFormat.duration(ms: rank.durationMs)
             case .turns: StatsFormat.grouped(rank.turns)
             }
@@ -79,7 +79,7 @@ struct SessionLeaderboard: View {
                 .formTooltip(
                     rank.title,
                     detail:
-                        "\(StatsFormat.grouped(rank.totalTokens)) tokens · \(StatsFormat.duration(ms: rank.durationMs)) · \(StatsFormat.grouped(rank.turns)) turns"
+                        "\(StatsFormat.grouped(rank.tokens)) tokens · \(StatsFormat.duration(ms: rank.durationMs)) · \(StatsFormat.grouped(rank.turns)) turns"
                 )
                 .accessibilityLabel("\(rank.title), \(metric.value(rank))")
                 .accessibilityHint("Opens this session")

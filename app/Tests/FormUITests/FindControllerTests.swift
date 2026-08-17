@@ -7,9 +7,12 @@ import Testing
 /// and surviving a streaming update without losing the current match.
 @MainActor
 struct FindControllerTests {
-    private func openFind(_ harness: CommandsHarness, query: String = "a") async -> FindController {
+    private func openFind(
+        _ harness: CommandsHarness, query: String = "a", sourceLocation: SourceLocation = #_sourceLocation
+    ) async -> FindController {
         harness.center.openFind(seed: query)
-        await harness.wait { harness.center.find.hasMatches }
+        let found = await harness.wait { harness.center.find.hasMatches }
+        #expect(found, "the find query never resolved", sourceLocation: sourceLocation)
         return harness.center.find
     }
 
@@ -176,6 +179,25 @@ struct FindControllerTests {
         #expect(find.currentIndex == 1)
         await harness.center.run(id: "find.previous")
         #expect(find.currentIndex == 0)
+    }
+
+    /// The toggles read the core's ranges out of the core's snippet. If a range has gone
+    /// stale against text that moved under a streaming update, filtering must narrow the
+    /// result set — not take the app down.
+    @Test("the toggles tolerate a range that no longer fits its snippet")
+    func togglesToleratePathologicalRanges() {
+        let snippet = "…héllo 🇬🇧 world…"
+        for range in [HighlightRange(start: 5, len: -3), HighlightRange(start: -2, len: 4),
+                      HighlightRange(start: 999, len: 3), HighlightRange(start: 8, len: 999),
+                      HighlightRange(start: 8, len: 1)] {
+            let geometry = HighlightGeometry(snippet)
+            let spans = geometry.spans(for: [range])
+            for span in spans {
+                _ = geometry.substring(span)
+                _ = geometry.isWholeWord(span)
+            }
+            #expect(spans.allSatisfy { $0.upper > $0.lower })
+        }
     }
 
     @Test("highlights are reported per entry, with the current one called out")

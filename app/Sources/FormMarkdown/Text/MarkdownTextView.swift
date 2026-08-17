@@ -108,12 +108,16 @@ struct MarkdownTextRun: NSViewRepresentable {
     /// the whole run, so TextKit re-lays-out every paragraph above the caret on every token.
     /// A prose answer coalesces into one text run, which is exactly the case where that
     /// becomes quadratic.
-    static func update(_ storage: NSTextStorage, to next: NSAttributedString) {
+    /// Returns how many UTF-16 units were rewritten — the work metric the streaming budget
+    /// test asserts on, because "only the tail was touched" is a property of the algorithm
+    /// and a wall-clock millisecond count is a property of the machine.
+    @discardableResult
+    static func update(_ storage: NSTextStorage, to next: NSAttributedString) -> Int {
         let old = storage.string
         let new = next.string
         guard !old.isEmpty else {
             storage.setAttributedString(next)
-            return
+            return next.length
         }
 
         var cut = old.commonPrefix(with: new).utf16.count
@@ -128,14 +132,15 @@ struct MarkdownTextRun: NSViewRepresentable {
 
         guard cut > 0 else {
             storage.setAttributedString(next)
-            return
+            return next.length
         }
+        let replacement = next.attributedSubstring(
+            from: NSRange(location: cut, length: (new as NSString).length - cut))
         storage.beginEditing()
         storage.replaceCharacters(
-            in: NSRange(location: cut, length: oldNS.length - cut),
-            with: next.attributedSubstring(
-                from: NSRange(location: cut, length: (new as NSString).length - cut)))
+            in: NSRange(location: cut, length: oldNS.length - cut), with: replacement)
         storage.endEditing()
+        return replacement.length
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {

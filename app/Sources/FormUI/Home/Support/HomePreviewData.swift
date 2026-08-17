@@ -12,6 +12,10 @@ enum HomePreviewData {
 
     static let allTime: UsageStats = MockCorpus.demo.stats[.all] ?? UsageStats(range: .all)
 
+    /// The 7-day document. Same shape, a tenth of the marks — what the snapshot tests
+    /// compare, because rasterising 90 days of charts four times is not worth the seconds.
+    static let week: UsageStats = MockCorpus.demo.stats[.d7] ?? UsageStats(range: .d7)
+
     /// First launch: a fully-populated document of zeros (spec 03 §3).
     static let empty = UsageStats(range: .d7)
 

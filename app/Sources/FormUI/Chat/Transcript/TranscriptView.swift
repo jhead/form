@@ -38,7 +38,15 @@ struct TranscriptView: View {
                     LazyVStack(alignment: .leading, spacing: theme.metrics.spacing.xxl) {
                         ForEach(items) { item in
                             row(item, columnWidth: columnWidth)
-                                .id(item.id)
+                                // The theme is part of the row's *identity*, not just its
+                                // value. SwiftUI does not redraw an already-realised
+                                // `LazyVStack` row when only the environment changes: on an
+                                // appearance switch the message rows come back blank while
+                                // their siblings — the same stack, one row apart — repaint
+                                // correctly. Re-identifying them forces the rebuild that
+                                // acceptance criterion 7 needs. Reproduced without any of
+                                // this file's other machinery; see the W10 report.
+                                .id("\(themeKey)/\(item.id)")
                         }
                         theme.color.background.opacity(0)
                             .frame(height: theme.metrics.spacing.xs)
@@ -76,6 +84,12 @@ struct TranscriptView: View {
         }
     }
 
+    /// Everything about the theme a row's drawing depends on: the palette and the user's
+    /// text-size multiplier, which `Theme.id` alone does not capture.
+    private var themeKey: String {
+        "\(theme.id)@\(theme.typography.scale)"
+    }
+
     /// Cheap proxy for "the tail grew": the streaming message's length. Watching the whole
     /// transcript would allocate on every delta.
     private var contentSignature: Int {
@@ -103,15 +117,15 @@ struct TranscriptView: View {
         // finished message re-renders on every delta of the one still arriving.
         case let .user(entry, message):
             UserMessageRow(
-                entry: entry, message: message, columnWidth: columnWidth,
+                theme: theme, entry: entry, message: message, columnWidth: columnWidth,
                 onRetry: { retry(entry.id) }, onBranch: { branch(entry.id) }
             )
             .equatable()
 
         case let .assistant(entry, message, isStreaming):
             AssistantMessageRow(
-                entry: entry, message: message, isStreaming: isStreaming, effort: effort,
-                editor: stores.settings.settings.editor, client: stores.client,
+                theme: theme, entry: entry, message: message, isStreaming: isStreaming,
+                effort: effort, editor: stores.settings.settings.editor, client: stores.client,
                 onRetry: { retry(entry.id) }, onBranch: { branch(entry.id) }
             )
             .equatable()

@@ -14,18 +14,21 @@ struct HomeMetrics: Sendable {
     /// The weekday × hour matrix is read across a 24-column row, so its cells are wider.
     var matrixCell: CGFloat = 13
 
-    /// Plot heights. Three sizes only — a dashboard with five is a dashboard that drifts.
+    /// Plot heights. Two sizes only — a dashboard with five is a dashboard that drifts.
     var chart: CGFloat = 180
-    var chartTall: CGFloat = 240
     var chartCompact: CGFloat = 116
 
     var donut: CGFloat = 168
-    var donutThickness: CGFloat = 26
 
     /// Minimum widths the adaptive grids lay out against.
     var tileMinWidth: CGFloat = 150
-    var columnMinWidth: CGFloat = 320
     var tableMinWidth: CGFloat = 620
+
+    /// The control row's two segmented controls. `SegmentedToggle` divides its width
+    /// equally between segments, so it needs to be told how much to take — left to size
+    /// itself it either fills the column or crushes its labels together.
+    var tabSelectorWidth: CGFloat = 400
+    var periodSelectorWidth: CGFloat = 150
 
     /// The hover readout card and its legend swatches.
     var readoutWidth: CGFloat = 200

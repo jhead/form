@@ -52,7 +52,7 @@ private struct LaunchGate: View {
                 appState: appState,
                 themeController: launch.themeController,
                 toasts: launch.toasts,
-                home: { PendingSurface.home() },
+                home: { HomeView(stores: stores) },
                 session: { _ in ChatView(stores: stores) }
             )
             .environment(\.commandCenter, launch.commandCenter)

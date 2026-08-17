@@ -18,7 +18,7 @@ CORE_LIB_DIR := $(abspath $(CORE_DIR)/target/$(PROFILE))
 LINK_FLAGS   := -Xlinker -L$(CORE_LIB_DIR)
 
 .PHONY: all debug release core app bundle run test test-rust test-swift lint fmt \
-        headers check-symbols cli clean xcode verify-xcode
+        headers check-symbols cli clean xcode verify-xcode form.xcodeproj
 
 all: bundle
 
@@ -99,7 +99,10 @@ verify-xcode: form.xcodeproj
 xcode: form.xcodeproj
 	@open form.xcodeproj
 
-form.xcodeproj: project.yml app/Package.swift
+## Always regenerated rather than tracked as a file target: xcodegen bakes in a source file
+## list, so adding a file under app/Sources/form/ leaves a stale project and verify-xcode
+## fails on a file list that no longer matches. Generation takes about a second.
+form.xcodeproj:
 	@command -v xcodegen >/dev/null || { \
 		echo "xcodegen not found. Install it with: brew install xcodegen"; exit 1; }
 	@echo "==> xcodegen"

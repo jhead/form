@@ -46,7 +46,7 @@ struct CommandsOverlay: ViewModifier {
         .onAppear(perform: startMonitor)
         .onDisappear(perform: stopMonitor)
         // `settings.shortcuts` is the user's override table; re-resolve when it moves.
-        .onChange(of: center.stores.settings.settings.shortcuts ?? [:]) {
+        .onChange(of: center.stores.settings.settings.shortcuts) {
             center.settingsChanged()
         }
         // The sidebar's magnifier button raises the palette by setting the flag directly.

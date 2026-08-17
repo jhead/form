@@ -3,19 +3,19 @@ import SwiftUI
 
 /// The seam between the shell and the two surfaces other workstreams own.
 ///
-/// W10 (`ChatView`) and W12 (`HomeView`) land in sibling directories that W9 must not create
-/// files in, and neither type exists while this workstream is in flight. Rather than stub
-/// their views — which would collide with the real ones — `RootView` is generic over the two
-/// content builders, and the app root supplies them:
+/// W10's `ChatView` and W12's dashboard live in sibling directories W9 must not create files
+/// in, and they land on their own schedule. Rather than stub their views — which would
+/// collide with the real ones — `RootView` is generic over the two content builders and the
+/// app root supplies them, so adopting a surface is a one-line change in `FormApp.swift`:
 ///
 /// ```swift
-/// RootView(stores: stores, appState: state,
-///          home: { HomeView() },
-///          session: { ChatView(sessionId: $0) })
+/// RootView(stores:appState:themeController:toasts:,
+///          home: { HomeView(stores: stores) },
+///          session: { _ in ChatView(stores: stores) })
 /// ```
 ///
-/// The parameterless `RootView(stores:appState:)` substitutes `PendingSurface`, so the shell
-/// builds, runs and is demonstrable before those workstreams land. See the W9 report.
+/// `ChatView` is wired; `home` is still a `PendingSurface` because W12 exposes no top-level
+/// view yet. See the W9 report.
 public struct PendingSurface: View {
     @Environment(\.theme) private var theme
 

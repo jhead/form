@@ -6,10 +6,10 @@ import FormDesign
 /// A sent prompt: right-aligned, filled, capped at 72 % of the column (F1.2, spec 08 §1).
 /// Attachments ride above the text as thumbnail chips (F3.5).
 struct UserMessageRow: View, Equatable {
-    /// Passed in rather than read from the environment: this row is `.equatable()`, and
-    /// `EquatableView` short-circuits `body` — including on an environment change — so the
-    /// theme has to be part of the value being compared or the bubble keeps the old palette
-    /// through an appearance switch (acceptance criterion 7).
+    /// Passed in rather than read from the environment, because this row is `.equatable()`:
+    /// the theme has to be part of the value being compared or a re-render on an appearance
+    /// switch would be skipped as a no-op. `TranscriptView` also keys the row's *identity* on
+    /// the theme — see the comment there for why both are needed.
     let theme: Theme
 
     let entry: Entry
@@ -46,8 +46,8 @@ struct UserMessageRow: View, Equatable {
     /// See `AssistantMessageRow.==`: closures are never equal, so without this every bubble
     /// re-renders on every delta of the message being streamed.
     nonisolated static func == (a: UserMessageRow, b: UserMessageRow) -> Bool {
-        a.entry.id == b.entry.id && a.columnWidth == b.columnWidth && a.message == b.message
-            && a.theme == b.theme
+        a.entry.id == b.entry.id && a.columnWidth == b.columnWidth && a.theme == b.theme
+            && a.message == b.message
     }
 
     private var bubble: some View {

@@ -212,17 +212,92 @@ struct CommandPaletteTests {
         #expect(matched.lowercased() == "tap")
     }
 
-    @Test("highlight segmentation survives overlapping and out-of-range input")
-    func segmentationIsDefensive() {
-        let text = "abcdef"
-        let merged = HighlightedText.merge(
-            [HighlightRange(start: 0, len: 3), HighlightRange(start: 2, len: 2),
-             HighlightRange(start: 99, len: 4), HighlightRange(start: 4, len: 99)],
-            limit: text.utf16.count)
-        #expect(merged == [HighlightRange(start: 0, len: 6)])
-
-        let segments = HighlightedText.segments(of: text, ranges: [HighlightRange(start: 2, len: 2)])
+    @Test("highlight segmentation splits on the ranges it is given")
+    func segmentation() {
+        let segments = HighlightedText.segments(
+            of: "abcdef", ranges: [HighlightRange(start: 2, len: 2)])
         #expect(segments.map(\.text) == ["ab", "cd", "ef"])
         #expect(segments.map(\.isMatch) == [false, true, false])
+    }
+
+    @Test("overlapping and adjacent ranges merge into one run")
+    func segmentationMerges() {
+        let segments = HighlightedText.segments(
+            of: "abcdef",
+            ranges: [HighlightRange(start: 0, len: 3), HighlightRange(start: 2, len: 2),
+                     HighlightRange(start: 4, len: 99)])
+        #expect(segments.map(\.text) == ["abcdef"])
+        #expect(segments.map(\.isMatch) == [true])
+    }
+}
+
+/// The crash W13 hit under load, and the class of bug behind it.
+///
+/// `HighlightRange.range(in:)` is documented to return `nil` for a range that does not fall
+/// inside the string. It does for offsets past the end — but a negative `start` or `len` walks
+/// a `String.Index` backwards past a limit that cannot stop it, and either runs off the front
+/// or produces an upper bound below the lower one ("Range requires lowerBound <= upperBound").
+/// A range can go stale exactly that way while a transcript moves under a streaming update, so
+/// nothing in `Commands/` may hand a raw offset to the stdlib. Everything goes through
+/// `HighlightGeometry`, and these are its terms.
+@MainActor
+struct HighlightGeometryTests {
+    /// Two multi-scalar graphemes and a combining character, so every offset in the middle of
+    /// one is a chance to slice a `Character` in half.
+    static let wideText = "héllo 🇬🇧 world 世界 🧑‍🚀 tail"
+
+    @Test("degenerate ranges never trap and never lose text")
+    func degenerateRangesAreTotal() {
+        let text = Self.wideText
+        let count = text.utf16.count
+        for start in (-4...(count + 4)) {
+            for len in (-4...6) {
+                let segments = HighlightedText.segments(
+                    of: text, ranges: [HighlightRange(start: start, len: len)])
+                #expect(
+                    segments.map(\.text).joined() == text,
+                    "start=\(start) len=\(len) did not reproduce the string")
+            }
+        }
+    }
+
+    @Test("a range landing inside a grapheme covers the whole grapheme")
+    func partialGraphemesRoundOutwards() throws {
+        let flag = "ab🇬🇧cd"  // the flag is 2 scalars, 4 UTF-16 units, at offset 2
+        // Offset 3 is inside the flag; offset 4 is between its two regional indicators.
+        let segments = HighlightedText.segments(of: flag, ranges: [HighlightRange(start: 3, len: 1)])
+        #expect(segments.map(\.text).joined() == flag)
+        let matched = segments.filter(\.isMatch).map(\.text).joined()
+        #expect(matched == "🇬🇧", "expected the whole grapheme, got \(matched.debugDescription)")
+    }
+
+    @Test("spans are clamped, snapped, sorted and merged")
+    func spansAreNormalised() throws {
+        let geometry = HighlightGeometry("abcdef")
+        #expect(geometry.utf16Count == 6)
+        #expect(geometry.spans(for: []).isEmpty)
+        #expect(geometry.spans(for: [HighlightRange(start: 5, len: -3)]).isEmpty)
+        #expect(geometry.spans(for: [HighlightRange(start: -9, len: 2)]).count == 1)
+        #expect(geometry.spans(for: [HighlightRange(start: 99, len: 2)]).isEmpty)
+
+        let merged = geometry.spans(for: [
+            HighlightRange(start: 4, len: 2), HighlightRange(start: 0, len: 3),
+            HighlightRange(start: 2, len: 2),
+        ])
+        #expect(merged.count == 1)
+        let whole = try #require(merged.first)
+        #expect(geometry.substring(whole) == "abcdef")
+    }
+
+    @Test("word boundaries are read off the geometry, not off raw offsets")
+    func wholeWordDetection() throws {
+        let geometry = HighlightGeometry("drag and drop")
+        let standalone = try #require(geometry.spans(for: [HighlightRange(start: 5, len: 3)]).first)
+        #expect(geometry.substring(standalone) == "and")
+        #expect(geometry.isWholeWord(standalone))
+
+        let inside = try #require(geometry.spans(for: [HighlightRange(start: 1, len: 2)]).first)
+        #expect(geometry.substring(inside) == "ra")
+        #expect(!geometry.isWholeWord(inside))
     }
 }

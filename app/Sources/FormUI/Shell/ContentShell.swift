@@ -21,6 +21,28 @@ struct ContentShell<HomeContent: View, SessionContent: View>: View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentBackground()
+            .overlay(alignment: .topLeading) { reopenSidebarButton }
+    }
+
+    /// The sidebar's own toggle lives *in* the sidebar, so collapsing it takes the control
+    /// away with it and `⌘\` becomes the only way back — which is not discoverable and reads
+    /// as a dead end. This is the way back in, and it appears only while there is one to
+    /// need. It sits clear of the traffic lights, which move over this pane when the sidebar
+    /// is gone.
+    @ViewBuilder
+    private var reopenSidebarButton: some View {
+        if appState.sidebarCollapsed {
+            IconButton(
+                systemImage: "sidebar.leading",
+                accessibilityLabel: "Show Sidebar"
+            ) {
+                appState.toggleSidebar()
+            }
+            .padding(.leading, theme.metrics.trafficLightInset)
+            .padding(.top, theme.metrics.spacing.md)
+            .formTooltip("Show Sidebar", detail: "⌘\\")
+            .transition(.opacity)
+        }
     }
 
     @ViewBuilder

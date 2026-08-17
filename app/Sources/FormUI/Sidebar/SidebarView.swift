@@ -66,17 +66,12 @@ public struct SidebarView: View {
                     }
                     .background(theme.color.backgroundSidebar)
                 }
-                // Both bounds are load-bearing. A scroll view reports its content as its
-                // ideal *and* passes its content's minimum up, and `NavigationSplitView`
-                // sizes itself to the taller column's demand — so without an explicit
-                // `minHeight: 0` and a modest `idealHeight`, a 26-row corpus makes the split
-                // view 1600 pt tall and it overflows off the top and bottom of the window.
-                .frame(
-                    minWidth: 0,
-                    maxWidth: .infinity,
-                    minHeight: 0,
-                    idealHeight: theme.metrics.windowMinHeight,
-                    maxHeight: .infinity)
+                // Plain bounds only. The content-height overflow this used to guard against
+                // is fixed in `RootView`, by pinning the split view to the size a
+                // `GeometryReader` reports; adding a second `GeometryReader` here actively
+                // reintroduced it, because inside a column that is already being sized by its
+                // content the reader reports that same content height back.
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                 .sidebarBackground()
                 // The split view offers its own toggle in the title bar; the sidebar's own
                 // control row is the one spec 09 §2 asks for.
@@ -321,3 +316,4 @@ private struct SidebarPreview: View {
         .theme(theme)
     }
 }
+

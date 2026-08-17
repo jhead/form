@@ -225,19 +225,37 @@ struct CommandCenterTests {
         #expect(forward?.isEnabled(center.context) == false)
     }
 
-    @Test("⌘1–⌘9 jump to the sidebar's flattened order")
-    func rankJumps() async {
+    /// The rank a user sees comes from `SidebarOrder`, which orders by the core's dense
+    /// manual `index` so a dragged session stays put. `SessionStore.ordered` sorts by
+    /// pinned-then-`updatedAt` and disagrees; a numbered jump must follow the rows on screen.
+    @Test("⌘1–⌘9 jump to the sidebar's flattened visible order")
+    func rankJumps() async throws {
         let harness = CommandsHarness()
-        let ordered = harness.stores.sessions.ordered
-        try? #require(ordered.count >= 2)
+        let visible = SidebarOrder.visibleSessions(in: harness.stores.sessions)
+        try #require(visible.count >= 2)
 
         await harness.center.run(id: "nav.session2")
-        #expect(harness.stores.sessions.selectedSessionId == ordered[1].id)
-        #expect(harness.state.currentSessionId == ordered[1].id)
+        #expect(harness.stores.sessions.selectedSessionId == visible[1].id)
+        #expect(harness.state.currentSessionId == visible[1].id)
 
         // A rank past the end of the list is disabled rather than crashing.
         let ninth = AppCommands.command(id: "nav.session9")
-        #expect(ninth?.isEnabled(harness.context) == (ordered.count >= 9))
+        #expect(ninth?.isEnabled(harness.context) == (visible.count >= 9))
+    }
+
+    @Test("a collapsed group's rows are not numbered")
+    func rankSkipsCollapsedGroups() async throws {
+        let harness = CommandsHarness()
+        let store = harness.stores.sessions
+        let before = SidebarOrder.visibleSessions(in: store)
+        let firstGroup = try #require(store.groups.first { !SidebarOrder.sessions(in: $0, store: store).isEmpty })
+
+        try await store.setCollapsed(firstGroup.id, true)
+        let after = SidebarOrder.visibleSessions(in: store)
+        #expect(after.count < before.count)
+
+        await harness.center.run(id: "nav.session1")
+        #expect(harness.stores.sessions.selectedSessionId == after.first?.id)
     }
 
     @Test("⌘\\ toggles the sidebar and persists it")

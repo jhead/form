@@ -114,7 +114,7 @@ struct ModelsTab: View {
 
     private var providerNames: [String: String] {
         Dictionary(
-            stats.providers.map { ($0.providerId, $0.name) }, uniquingKeysWith: { first, _ in first })
+            stats.providers.map { ($0.providerId, $0.displayName) }, uniquingKeysWith: { first, _ in first })
     }
 
     private var displayNames: [String: String] {

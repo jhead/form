@@ -93,10 +93,17 @@ struct LatencyDistribution: View {
         .formChartValueXAxis(theme, .durationMs, desiredCount: 5)
     }
 
+    /// Width assumed for the open-ended final bin when placing its midpoint.
+    private static let openBinWidthMs: Double = 250
+
     private var points: [Point] {
         latency.enumerated().flatMap { index, stat in
             stat.histogram.map { bin in
-                Point(model: name(stat, index), bin: (bin.lower + bin.upper) / 2, count: bin.count)
+                // The final bin is open-ended; plot it at its lower bound plus the width of
+                // the previous one rather than inventing a midpoint from a missing upper.
+                let lower = Double(bin.lowerMs)
+                let upper = bin.upperMs.map(Double.init) ?? (lower + Self.openBinWidthMs)
+                return Point(model: name(stat, index), bin: (lower + upper) / 2, count: bin.count)
             }
         }
     }

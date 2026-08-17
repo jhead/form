@@ -11,7 +11,11 @@ public struct HomeView: View {
     @Environment(\.theme) private var theme
 
     private let stores: CoreStores
-    private let onOpenSession: (String) -> Void
+    /// Overrides where a leaderboard row goes. `nil` uses the shell's own routing.
+    private let onOpenSession: ((String) -> Void)?
+
+    /// Optional so a `#Preview` can render the dashboard without standing up the shell.
+    @Environment(AppState.self) private var appState: AppState?
 
     /// UI state, not user settings — the core's `Settings` has no slot for it, and it is
     /// per-window presentation rather than something to sync (spec 12 §1: both persist).
@@ -26,11 +30,21 @@ public struct HomeView: View {
 
     public init(stores: CoreStores, onOpenSession: ((String) -> Void)? = nil) {
         self.stores = stores
-        self.onOpenSession =
-            onOpenSession
-            ?? { sessionId in
-                Task { await stores.select(sessionId) }
-            }
+        self.onOpenSession = onOpenSession
+    }
+
+    /// Clicking a leaderboard row (F11.9, spec 12 §6).
+    ///
+    /// Routing goes through `AppState`, not through `SessionStore`, so the jump lands in
+    /// W9's `RouteHistory` and `⌘[` comes back here. Loading the transcript is the store's
+    /// job and happens alongside it.
+    private func open(sessionId: String) {
+        if let onOpenSession {
+            onOpenSession(sessionId)
+            return
+        }
+        appState?.showSession(sessionId)
+        Task { await stores.select(sessionId) }
     }
 
     init(stores: CoreStores, tab: HomeTab, period: StatsRange) {
@@ -116,7 +130,7 @@ public struct HomeView: View {
                 segments: HomeTab.allCases.map {
                     .init(value: $0, title: $0.title, systemImage: $0.systemImage)
                 })
-            .fixedSize()
+            .frame(width: metrics.tabSelectorWidth)
 
             Spacer(minLength: theme.metrics.spacing.lg)
 
@@ -125,7 +139,7 @@ public struct HomeView: View {
                 segments: StatsRange.allCases.map { .init(value: $0, title: $0.segmentTitle) },
                 height: theme.metrics.controlHeightMedium
             )
-            .fixedSize()
+            .frame(width: metrics.periodSelectorWidth)
         }
     }
 
@@ -140,7 +154,7 @@ public struct HomeView: View {
             case .models:
                 ModelsTab(stats: stats, metrics: metrics)
             case .activity:
-                ActivityTab(stats: stats, onOpenSession: onOpenSession, metrics: metrics)
+                ActivityTab(stats: stats, onOpenSession: open(sessionId:), metrics: metrics)
             case .cost:
                 CostTab(stats: stats, metrics: metrics)
             }

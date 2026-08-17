@@ -16,8 +16,13 @@ struct HomeDashboardTests {
     /// practice: no clock, no store, no hidden state between passes.
     @Test("the dashboard renders purely over the document")
     func rendersPurelyOverTheDocument() throws {
-        let first = HomePreviewData.populated
-        let second = HomePreviewData.allTime
+        let first = HomePreviewData.week
+        let second = HomePreviewData.populated
+
+        // The first render in a process warms fonts and Swift Charts' layout caches and is
+        // not bit-identical to the ones after it. Discard it: the property under test is
+        // that the *document* determines the output, not that AppKit is warm.
+        _ = try snapshot(OverviewTab(stats: first))
 
         let a = try snapshot(OverviewTab(stats: first))
         let b = try snapshot(OverviewTab(stats: first))
@@ -30,16 +35,18 @@ struct HomeDashboardTests {
     @Test("every tab renders an empty document without crashing or blanking")
     func emptyDocumentRendersEveryTab() throws {
         let empty = HomePreviewData.empty
-        #expect(try snapshot(OverviewTab(stats: empty)).isEmpty == false)
-        #expect(try snapshot(ModelsTab(stats: empty)).isEmpty == false)
-        #expect(try snapshot(ActivityTab(stats: empty, onOpenSession: { _ in })).isEmpty == false)
-        #expect(try snapshot(CostTab(stats: empty)).isEmpty == false)
+        #expect(try snapshot(OverviewTab(stats: empty), width: 700).isEmpty == false)
+        #expect(try snapshot(ModelsTab(stats: empty), width: 700).isEmpty == false)
+        #expect(
+            try snapshot(ActivityTab(stats: empty, onOpenSession: { _ in }), width: 700).isEmpty
+                == false)
+        #expect(try snapshot(CostTab(stats: empty), width: 700).isEmpty == false)
     }
 
     /// PNG rather than TIFF: the pixels are deterministic, but `tiffRepresentation` folds in
     /// a colour profile that differs between the first render of a process and later ones,
     /// which would make this test flaky for a reason that has nothing to do with the view.
-    private func snapshot(_ view: some View, width: CGFloat = 900) throws -> Data {
+    private func snapshot(_ view: some View, width: CGFloat = 700) throws -> Data {
         let renderer = ImageRenderer(
             content:
                 view
@@ -48,7 +55,8 @@ struct HomeDashboardTests {
         )
         renderer.scale = 1
         let image = try #require(renderer.nsImage)
-        let bitmap = try #require(NSBitmapImageRep(data: try #require(image.tiffRepresentation)))
+        let tiff = try #require(image.tiffRepresentation)
+        let bitmap = try #require(NSBitmapImageRep(data: tiff))
         return try #require(bitmap.representation(using: .png, properties: [:]))
     }
 

@@ -11,9 +11,19 @@ struct ComposerView: View {
     @Binding var text: String
 
     /// Every way an attachment can arrive — `+`, drop, paste — goes through W13's intake
-    /// (spec 13, Part B). It is cached per core rather than held in `@State`; see
-    /// `ComposerControllers`.
-    private var intake: AttachmentIntake { ComposerControllers.intake(for: stores) }
+    /// (spec 13, Part B).
+    ///
+    /// Held in `@State` so it lives as long as the composer, and *resolved through*
+    /// `ComposerControllers` so the value SwiftUI discards on every rebuild is the same
+    /// object rather than a fresh one: the initializer claims `CoreStores.onEvent`, and a
+    /// second intake would silently take the sink from the one the tray is bound to.
+    @State private var intake: AttachmentIntake
+
+    init(stores: CoreStores, text: Binding<String>) {
+        self.stores = stores
+        _text = text
+        _intake = State(initialValue: ComposerControllers.intake(for: stores))
+    }
 
     private var chat: ChatStore { stores.chat }
 
@@ -77,11 +87,12 @@ struct ComposerView: View {
         }
     }
 
-    /// The placeholder says what `⏎` will actually do: queue behind the run, or stop it and
-    /// follow (`defaults.queueMode`, mirrored onto `ChatStore`).
+    /// The placeholder says what `⏎` will actually do. `interrupt` does not replace the
+    /// running turn — nothing can — it stops the run and the queued prompt starts the next
+    /// one (`defaults.queueMode`, mirrored onto `ChatStore`).
     private var placeholder: String {
         guard chat.isStreaming else { return "Ask anything…" }
-        return chat.queueMode == .interrupt ? "Interrupt and send…" : "Queue a message…"
+        return chat.queueMode == .interrupt ? "Stop and send…" : "Queue a message…"
     }
 
     // MARK: - Actions

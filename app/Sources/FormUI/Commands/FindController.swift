@@ -228,30 +228,21 @@ public final class FindController {
 
     /// Applies the two toggles to a hit by reading the core's ranges out of the core's
     /// snippet. No searching happens here — only a yes/no on what the core already found.
+    ///
+    /// The ranges go through `HighlightGeometry` rather than `HighlightRange.range(in:)`: a
+    /// range that has gone stale against a transcript still moving under a stream must narrow
+    /// the result set, not take the app down.
     private func passesToggles(_ match: FindMatch) -> Bool {
         guard caseSensitive || wholeWord else { return true }
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else { return true }
-        let snippet = match.snippet
-        for highlight in match.ranges {
-            guard let range = highlight.range(in: snippet) else { continue }
-            if caseSensitive, String(snippet[range]) != needle { continue }
-            if wholeWord, !isWholeWord(range, in: snippet) { continue }
+
+        let geometry = HighlightGeometry(match.snippet)
+        for span in geometry.spans(for: match.ranges) {
+            if caseSensitive, geometry.substring(span) != needle { continue }
+            if wholeWord, !geometry.isWholeWord(span) { continue }
             return true
         }
         return false
-    }
-
-    private func isWholeWord(_ range: Range<String.Index>, in text: String) -> Bool {
-        let isWordCharacter: (Character) -> Bool = { $0.isLetter || $0.isNumber || $0 == "_" }
-        if range.lowerBound > text.startIndex {
-            let before = text[text.index(before: range.lowerBound)]
-            if isWordCharacter(before) { return false }
-        }
-        if range.upperBound < text.endIndex {
-            let after = text[range.upperBound]
-            if isWordCharacter(after) { return false }
-        }
-        return true
     }
 }

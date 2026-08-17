@@ -430,18 +430,20 @@ extension MockCorpus {
         headline.currentStreak = 4
         headline.longestStreak = 11
         headline.peakHour = 15
-        headline.favoriteModel = ModelRef(
-            providerId: "anthropic", modelId: "claude-opus-5", thinkingLevel: .high)
+        headline.favoriteModel = ModelRefLite(
+            providerId: "anthropic", modelId: "claude-opus-5")
         headline.totalCost = totalCost
         headline.avgSessionTokens =
             headline.sessions == 0 ? 0 : totalTokens / Swift.max(1, headline.sessions)
         headline.avgTurnDurationMs = 26_400
         stats.headline = headline
 
+        // The stats document identifies a model without its thinking level, so the mock
+        // corpus must too — otherwise previews disagree with a real document.
         let refs = [
-            ModelRef(providerId: "anthropic", modelId: "claude-opus-5", thinkingLevel: .high),
-            ModelRef(providerId: "anthropic", modelId: "claude-sonnet-5", thinkingLevel: .medium),
-            ModelRef(providerId: "openai", modelId: "gpt-5", thinkingLevel: .low),
+            ModelRefLite(providerId: "anthropic", modelId: "claude-opus-5"),
+            ModelRefLite(providerId: "anthropic", modelId: "claude-sonnet-5"),
+            ModelRefLite(providerId: "openai", modelId: "gpt-5"),
         ]
         let names = ["Opus 5", "Sonnet 5", "GPT-5"]
         let shares = [0.62, 0.27, 0.11]
@@ -458,7 +460,7 @@ extension MockCorpus {
         }
         stats.providers = [
             {
-                var p = ProviderStat(providerId: "anthropic", name: "Anthropic")
+                var p = ProviderStat(providerId: "anthropic", displayName: "Anthropic")
                 p.share = 0.89
                 p.turns = Int64(Double(totalTurns) * 0.89)
                 p.totalTokens = Int64(Double(totalTokens) * 0.89)
@@ -466,7 +468,7 @@ extension MockCorpus {
                 return p
             }(),
             {
-                var p = ProviderStat(providerId: "openai", name: "OpenAI")
+                var p = ProviderStat(providerId: "openai", displayName: "OpenAI")
                 p.share = 0.11
                 p.turns = Int64(Double(totalTurns) * 0.11)
                 p.totalTokens = Int64(Double(totalTokens) * 0.11)
@@ -485,7 +487,7 @@ extension MockCorpus {
         var ranks: [SessionRank] = []
         for (i, session) in MockCorpus.rankTitles.enumerated() {
             var rank = SessionRank(sessionId: "ses_rank_\(i)", title: session)
-            rank.totalTokens = Int64(120_000 - i * 9_000)
+            rank.tokens = Int64(120_000 - i * 9_000)
             rank.durationMs = Int64(3_600_000 - i * 210_000)
             rank.turns = Int64(64 - i * 4)
             ranks.append(rank)
@@ -537,8 +539,9 @@ extension MockCorpus {
             stat.samples = Int64(60 + rng.next(400))
             stat.histogram = (0..<8).map { bin in
                 var bar = HistogramBin()
-                bar.lower = Double(bin) * 250
-                bar.upper = Double(bin + 1) * 250
+                bar.lowerMs = Int64(bin) * 250
+                // The final bin is open-ended, exactly as the core emits it.
+                bar.upperMs = bin == 7 ? nil : Int64(bin + 1) * 250
                 bar.count = Int64(rng.next(90))
                 return bar
             }

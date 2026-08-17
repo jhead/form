@@ -9,9 +9,15 @@ struct ComposerChipRow: View {
 
     let stores: CoreStores
 
-    /// Cached per core so the recent-roots list survives a rebuild — see
-    /// `ComposerControllers`.
-    private var workspace: WorkspaceRootController { ComposerControllers.workspace(for: stores) }
+    /// `@State`, resolved through `ComposerControllers`, for the same reason the intake is:
+    /// the value SwiftUI throws away on each rebuild has to be the same object, or the
+    /// recent-roots list restarts empty every time the composer re-renders.
+    @State private var workspace: WorkspaceRootController
+
+    init(stores: CoreStores) {
+        self.stores = stores
+        _workspace = State(initialValue: ComposerControllers.workspace(for: stores))
+    }
 
     var body: some View {
         HStack(spacing: theme.metrics.spacing.sm) {

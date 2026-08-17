@@ -134,7 +134,7 @@ public struct Headline: Codable, Sendable, Equatable {
     public var currentStreak: Int = 0
     public var longestStreak: Int = 0
     public var peakHour: Int = 0
-    public var favoriteModel: ModelRef?
+    public var favoriteModel: ModelRefLite?
     public var totalCost: Double = 0
     public var avgSessionTokens: Int64 = 0
     public var avgTurnDurationMs: Int64 = 0
@@ -162,7 +162,7 @@ public struct Headline: Codable, Sendable, Equatable {
         currentStreak = try c.decodeIfPresent(Int.self, forKey: .currentStreak) ?? 0
         longestStreak = try c.decodeIfPresent(Int.self, forKey: .longestStreak) ?? 0
         peakHour = try c.decodeIfPresent(Int.self, forKey: .peakHour) ?? 0
-        favoriteModel = try c.decodeIfPresent(ModelRef.self, forKey: .favoriteModel)
+        favoriteModel = try c.decodeIfPresent(ModelRefLite.self, forKey: .favoriteModel)
         totalCost = try c.decodeIfPresent(Double.self, forKey: .totalCost) ?? 0
         avgSessionTokens = try c.decodeIfPresent(Int64.self, forKey: .avgSessionTokens) ?? 0
         avgTurnDurationMs = try c.decodeIfPresent(Int64.self, forKey: .avgTurnDurationMs) ?? 0
@@ -216,8 +216,22 @@ public struct HeatmapCell: Codable, Sendable, Equatable, Identifiable {
     public var id: String { date }
 }
 
+/// How the stats document identifies a model: provider and id only, no thinking level, so
+/// one model is one row on every chart regardless of the effort it ran at.
+public struct ModelRefLite: Codable, Sendable, Equatable, Hashable {
+    public var providerId: String = ""
+    public var modelId: String = ""
+
+    public init(providerId: String = "", modelId: String = "") {
+        self.providerId = providerId
+        self.modelId = modelId
+    }
+
+    public var slug: String { "\(providerId)/\(modelId)" }
+}
+
 public struct ModelStat: Codable, Sendable, Equatable, Identifiable {
-    public var model: ModelRef
+    public var model: ModelRefLite
     public var displayName: String = ""
     public var turns: Int64 = 0
     public var totalTokens: Int64 = 0
@@ -228,7 +242,7 @@ public struct ModelStat: Codable, Sendable, Equatable, Identifiable {
     public var avgOutputTps: Double = 0
     public var errorRate: Double = 0
 
-    public init(model: ModelRef, displayName: String = "") {
+    public init(model: ModelRefLite, displayName: String = "") {
         self.model = model
         self.displayName = displayName
     }
@@ -238,15 +252,15 @@ public struct ModelStat: Codable, Sendable, Equatable, Identifiable {
 
 public struct ProviderStat: Codable, Sendable, Equatable, Identifiable {
     public var providerId: String = ""
-    public var name: String = ""
+    public var displayName: String = ""
     public var turns: Int64 = 0
     public var totalTokens: Int64 = 0
     public var share: Double = 0
     public var cost: Double = 0
 
-    public init(providerId: String = "", name: String = "") {
+    public init(providerId: String = "", displayName: String = "") {
         self.providerId = providerId
-        self.name = name
+        self.displayName = displayName
     }
 
     public var id: String { providerId }
@@ -255,6 +269,7 @@ public struct ProviderStat: Codable, Sendable, Equatable, Identifiable {
 public struct ToolStat: Codable, Sendable, Equatable, Identifiable {
     public var name: String = ""
     public var invocations: Int64 = 0
+    public var errors: Int64 = 0
     public var successRate: Double = 0
     public var meanDurationMs: Int64 = 0
 
@@ -266,7 +281,7 @@ public struct ToolStat: Codable, Sendable, Equatable, Identifiable {
 public struct SessionRank: Codable, Sendable, Equatable, Identifiable {
     public var sessionId: String = ""
     public var title: String = ""
-    public var totalTokens: Int64 = 0
+    public var tokens: Int64 = 0
     public var durationMs: Int64 = 0
     public var turns: Int64 = 0
 
@@ -309,6 +324,8 @@ public struct CacheStats: Codable, Sendable, Equatable {
 public struct CostPoint: Codable, Sendable, Equatable, Identifiable {
     public var date: String = ""
     public var cost: Double = 0
+    /// Running total across the period, so the overlay needs no Swift-side prefix sum.
+    public var cumulative: Double = 0
 
     public init(date: String = "") { self.date = date }
 
@@ -350,7 +367,7 @@ public struct CostStats: Codable, Sendable, Equatable {
     public var total: Double = 0
     public var byDay: [CostPoint] = []
     public var byProvider: [KeyedCost<String>] = []
-    public var byModel: [KeyedCost<ModelRef>] = []
+    public var byModel: [KeyedCost<ModelRefLite>] = []
     /// Mean daily cost over the trailing 14 days × 30; `0` with fewer than 3 active days.
     public var projectedMonthly: Double = 0
 
@@ -358,17 +375,18 @@ public struct CostStats: Codable, Sendable, Equatable {
 }
 
 public struct HistogramBin: Codable, Sendable, Equatable, Identifiable {
-    public var lower: Double = 0
-    public var upper: Double = 0
+    public var lowerMs: Int64 = 0
+    /// Absent on the final bin, which is open-ended.
+    public var upperMs: Int64?
     public var count: Int64 = 0
 
     public init() {}
 
-    public var id: Double { lower }
+    public var id: Int64 { lowerMs }
 }
 
 public struct LatencyStat: Codable, Sendable, Equatable, Identifiable {
-    public var model: ModelRef
+    public var model: ModelRefLite
     public var ttftP50: Int64 = 0
     public var ttftP90: Int64 = 0
     public var ttftP99: Int64 = 0
@@ -378,7 +396,7 @@ public struct LatencyStat: Codable, Sendable, Equatable, Identifiable {
     public var histogram: [HistogramBin] = []
     public var samples: Int64 = 0
 
-    public init(model: ModelRef) { self.model = model }
+    public init(model: ModelRefLite) { self.model = model }
 
     public var id: String { model.slug }
 }

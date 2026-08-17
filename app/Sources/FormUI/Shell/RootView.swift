@@ -40,28 +40,39 @@ public struct RootView<HomeContent: View, SessionContent: View>: View {
     }
 
     public var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(
-                stores: stores,
-                appState: appState,
-                themeController: themeController,
-                ungroupedCollapsed: $ungroupedCollapsed
-            )
-            .measuringSidebarWidth()
-            .navigationSplitViewColumnWidth(
-                min: theme.metrics.sidebarMinWidth,
-                ideal: appState.sidebarWidth,
-                max: theme.metrics.sidebarMaxWidth
-            )
-        } detail: {
-            ContentShell(
-                stores: stores, appState: appState, workspace: workspace,
-                home: home, session: session)
+        // `NavigationSplitView` sizes itself to its taller column's demand, and a scroll view
+        // reports its *content* height as that demand however its own frame is bounded. With
+        // a 26-session corpus the split view laid out 1595 pt tall inside an 860 pt window,
+        // sitting at y = −96 — the control row, the Home/Code toggle, `+ New` and the footer
+        // were all off-screen, and the app looked fine in a preview while being unusable.
+        //
+        // A `.frame(maxHeight:)` on the split view does not fix it: that proposes a size, and
+        // the split view lays out to content regardless. Reading the real available size and
+        // pinning both dimensions to it is what actually constrains the thing.
+        //
+        // `SidebarLayoutProbe` guards it: the split view's height must equal the window's.
+        GeometryReader { proxy in
+            NavigationSplitView(columnVisibility: $columnVisibility) {
+                SidebarView(
+                    stores: stores,
+                    appState: appState,
+                    themeController: themeController,
+                    ungroupedCollapsed: $ungroupedCollapsed
+                )
+                .measuringSidebarWidth()
+                .navigationSplitViewColumnWidth(
+                    min: theme.metrics.sidebarMinWidth,
+                    ideal: appState.sidebarWidth,
+                    max: theme.metrics.sidebarMaxWidth
+                )
+            } detail: {
+                ContentShell(
+                    stores: stores, appState: appState, workspace: workspace,
+                    home: home, session: session)
+            }
+            .navigationSplitViewStyle(.balanced)
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .navigationSplitViewStyle(.balanced)
-        // `maxHeight` is not decoration: `NavigationSplitView` sizes itself to the taller
-        // column's ideal height, so with only a minimum the sidebar's full row list makes the
-        // whole split view taller than the window and it overflows off both edges.
         .frame(
             minWidth: theme.metrics.windowMinWidth,
             maxWidth: .infinity,
