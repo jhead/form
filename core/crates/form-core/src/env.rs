@@ -28,10 +28,8 @@ pub fn load(dir: &Path) -> Option<PathBuf> {
     let mut current = Some(absolute.as_path());
     while let Some(path) = current {
         let candidate = path.join(".env");
-        if candidate.is_file() {
-            if apply(&candidate) {
-                return Some(candidate);
-            }
+        if candidate.is_file() && apply(&candidate) {
+            return Some(candidate);
         }
         current = path.parent();
     }

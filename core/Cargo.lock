@@ -441,6 +441,7 @@ dependencies = [
  "pi-catalog",
  "pi-core",
  "pi-sdk",
+ "pi-tools",
  "pulldown-cmark",
  "rand 0.8.7",
  "rand_chacha",

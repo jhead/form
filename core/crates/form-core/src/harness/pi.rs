@@ -7,13 +7,15 @@
 //! Two things are deliberately not `pi`'s job and stay here: mapping form's `ModelRef` onto a
 //! `provider/model` reference string, and refreshing OpenRouter's model list at runtime.
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use pi_agent::types::AgentEvent;
 use pi_auth::{ApiKeyCredential, Credential, InMemoryCredentialStore};
 use pi_core::{AbortSignal as PiAbortSignal, Api, Model as PiModel, ModelCost, ModelCostRates};
 use pi_sdk::Pi;
 
+use crate::app::ToolInvocationRecord;
 use crate::harness::{AbortSignal, Harness, RunContext, RunRequest, TurnRecord};
 use crate::protocol::{EntryKind, EventKind, Message, ModelRef, RunOutcome, ThinkingLevel};
 
@@ -307,6 +309,21 @@ struct Bridge {
     session_id: String,
     run_id: String,
     entry: parking_lot_lite::Slot,
+    /// Wall-clock of the first streamed token. The dashboard's latency charts are empty
+    /// without it, and it can only be observed here, as events arrive.
+    first_token_at: Mutex<Option<i64>>,
+    /// Tool calls in flight, so a finished one can be recorded with its real duration.
+    tools_started: Mutex<HashMap<String, (String, i64)>>,
+    tools_done: Mutex<Vec<ToolInvocationRecord>>,
+}
+
+impl Bridge {
+    fn note_first_token(&self) {
+        let mut slot = self.first_token_at.lock().expect("ttft slot poisoned");
+        if slot.is_none() {
+            *slot = Some(crate::protocol::now_ms());
+        }
+    }
 }
 
 /// A tiny mutex slot; the assistant entry does not exist until `message_start` arrives.
@@ -361,6 +378,13 @@ impl pi_agent::AgentEventListener for Bridge {
                     return;
                 };
                 let entry_id = entry.id;
+                if matches!(
+                    assistant_message_event,
+                    pi_core::AssistantMessageEvent::TextDelta { .. }
+                        | pi_core::AssistantMessageEvent::ThinkingDelta { .. }
+                ) {
+                    self.note_first_token();
+                }
                 // The streaming event crosses unchanged: form's `AssistantMessageEvent` is
                 // pi's, field for field, which `tests/pi_compat.rs` enforces.
                 if let Ok(event) =
@@ -390,12 +414,21 @@ impl pi_agent::AgentEventListener for Bridge {
                 tool_call_id,
                 tool_name,
                 args,
-            } => self.ctx.emit(EventKind::ToolExecutionStart {
-                session_id: self.session_id.clone(),
-                tool_call_id,
-                tool_name,
-                args,
-            }),
+            } => {
+                self.tools_started
+                    .lock()
+                    .expect("tool map poisoned")
+                    .insert(
+                        tool_call_id.clone(),
+                        (tool_name.clone(), crate::protocol::now_ms()),
+                    );
+                self.ctx.emit(EventKind::ToolExecutionStart {
+                    session_id: self.session_id.clone(),
+                    tool_call_id,
+                    tool_name,
+                    args,
+                })
+            }
             AgentEvent::ToolExecutionUpdate {
                 tool_call_id,
                 partial_result,
@@ -410,12 +443,29 @@ impl pi_agent::AgentEventListener for Bridge {
                 result,
                 is_error,
                 ..
-            } => self.ctx.emit(EventKind::ToolExecutionEnd {
-                session_id: self.session_id.clone(),
-                tool_call_id,
-                result: serde_json::to_value(&result).unwrap_or_default(),
-                is_error,
-            }),
+            } => {
+                if let Some((tool_name, started_at)) = self
+                    .tools_started
+                    .lock()
+                    .expect("tool map poisoned")
+                    .remove(&tool_call_id)
+                {
+                    self.tools_done.lock().expect("tool list poisoned").push(
+                        ToolInvocationRecord {
+                            tool_name,
+                            started_at,
+                            duration_ms: (crate::protocol::now_ms() - started_at).max(0),
+                            is_error,
+                        },
+                    );
+                }
+                self.ctx.emit(EventKind::ToolExecutionEnd {
+                    session_id: self.session_id.clone(),
+                    tool_call_id,
+                    result: serde_json::to_value(&result).unwrap_or_default(),
+                    is_error,
+                })
+            }
             AgentEvent::TurnEnd { .. } => {}
             AgentEvent::AgentEnd { .. } => {}
         }
@@ -457,21 +507,33 @@ impl Harness for PiHarness {
             Err(reason) => return fail(&ctx, &req, started, reason),
         };
 
-        let mut options = pi_agent::AgentOptions::default();
-        options.get_api_key = Some(Arc::new(AuthBridge {
-            pi: self.pi.clone(),
-        }));
+        let options = pi_agent::AgentOptions {
+            get_api_key: Some(Arc::new(AuthBridge {
+                pi: self.pi.clone(),
+            })),
+            ..Default::default()
+        };
 
-        let agent = match self
+        // Tools are granted only to a session with a workspace root, and the execution
+        // environment is rooted there. An unconfined session (F4.5) gets none: handing a
+        // model a shell scoped to the whole machine because the user never picked a folder
+        // is not a default anyone would choose deliberately.
+        let mut builder = self
             .pi
             .agent()
             .options(options)
             .model(model)
             .system_prompt(self.system_prompt.clone())
             .thinking_level(thinking_level(req.model.thinking_level))
-            .session_id(req.session_id.clone())
-            .build()
-        {
+            .session_id(req.session_id.clone());
+
+        if let Some(root) = req.workspace_root.as_deref() {
+            builder = builder
+                .env(Arc::new(pi_tools::LocalExecutionEnv::new(root.to_string())))
+                .tools(pi_tools::default_tools());
+        }
+
+        let agent = match builder.build() {
             Ok(agent) => agent,
             Err(e) => return fail(&ctx, &req, started, format!("agent: {}", e.message())),
         };
@@ -481,8 +543,11 @@ impl Harness for PiHarness {
             session_id: req.session_id.clone(),
             run_id: req.run_id.clone(),
             entry: Default::default(),
+            first_token_at: Mutex::new(None),
+            tools_started: Mutex::new(HashMap::new()),
+            tools_done: Mutex::new(Vec::new()),
         });
-        let _subscription = agent.subscribe(bridge);
+        let _subscription = agent.subscribe(bridge.clone());
 
         // Cancellation is explicit on both sides; poll form's flag and call pi's abort.
         let watch = {
@@ -518,11 +583,20 @@ impl Harness for PiHarness {
             model: req.model.clone(),
             started_at: started,
             ended_at: crate::protocol::now_ms(),
-            ttft_ms: None,
+            ttft_ms: bridge
+                .first_token_at
+                .lock()
+                .ok()
+                .and_then(|slot| *slot)
+                .map(|at| (at - started).max(0)),
             duration_ms: duration_ms as i64,
             usage: usage.clone(),
             outcome,
-            tools: Vec::new(),
+            tools: bridge
+                .tools_done
+                .lock()
+                .map(|list| list.clone())
+                .unwrap_or_default(),
         });
 
         ctx.emit(EventKind::TurnEnd {

@@ -145,3 +145,85 @@ async fn streams_a_real_completion() {
     println!("events ({}): {:?}", events.len(), events);
     println!("text: {:?}", probe.text.lock().unwrap());
 }
+
+/// A real tool call against a real workspace: the model must read a file to answer.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore]
+async fn uses_tools_against_a_workspace() {
+    use form_core::app::TurnRecord;
+    use form_core::harness::{AbortSignal, Harness, RunContext, RunRequest};
+    use form_core::protocol::{now_ms, Entry, EntryKind, EventKind};
+    use std::sync::{Arc, Mutex};
+
+    form_core::env::load(std::path::Path::new("."));
+
+    #[derive(Default)]
+    struct Probe {
+        tools: Mutex<Vec<String>>,
+        turns: Mutex<Vec<TurnRecord>>,
+        count: Mutex<usize>,
+    }
+    impl RunContext for Probe {
+        fn emit(&self, kind: EventKind) {
+            if let EventKind::ToolExecutionStart { tool_name, .. } = &kind {
+                self.tools.lock().unwrap().push(tool_name.clone());
+            }
+        }
+        fn append_entry(&self, session_id: &str, kind: EntryKind) -> Option<Entry> {
+            let mut count = self.count.lock().unwrap();
+            *count += 1;
+            Some(Entry {
+                id: format!("ent_{count}"),
+                session_id: session_id.to_string(),
+                seq: *count as u64,
+                parent_id: None,
+                timestamp: now_ms(),
+                kind,
+            })
+        }
+        fn replace_entry(&self, _entry: &Entry) {}
+        fn speed(&self) -> f64 {
+            1.0
+        }
+        fn record_turn(&self, turn: TurnRecord) {
+            self.turns.lock().unwrap().push(turn);
+        }
+    }
+
+    let harness = PiHarness::new(
+        "You are a coding agent. Use the read tool to inspect files before answering.".into(),
+    )
+    .await
+    .expect("harness");
+    let probe = Arc::new(Probe::default());
+    let ctx: Arc<dyn RunContext> = probe.clone();
+
+    harness
+        .run(
+            RunRequest {
+                session_id: "ses_tools".into(),
+                run_id: "run_tools".into(),
+                command_id: None,
+                prompt: "Read notes.txt in this directory and tell me the build number.".into(),
+                model: model(&test_model()),
+                workspace_root: Some("/tmp/form-ws".into()),
+                turn_index: 0,
+            },
+            ctx,
+            AbortSignal::new(),
+        )
+        .await;
+
+    let tools = probe.tools.lock().unwrap().clone();
+    let turns = probe.turns.lock().unwrap().clone();
+    println!("tools invoked: {tools:?}");
+    for turn in &turns {
+        println!(
+            "turn ttft={:?}ms duration={}ms tools_recorded={} tokens={}",
+            turn.ttft_ms,
+            turn.duration_ms,
+            turn.tools.len(),
+            turn.usage.total_tokens
+        );
+    }
+}

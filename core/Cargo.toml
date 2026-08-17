@@ -17,6 +17,7 @@ pi-sdk = { path = "../pi-rs/crates/pi-sdk" }
 pi-agent = { path = "../pi-rs/crates/pi-agent" }
 pi-catalog = { path = "../pi-rs/crates/pi-catalog" }
 pi-auth = { path = "../pi-rs/crates/pi-auth" }
+pi-tools = { path = "../pi-rs/crates/pi-tools" }
 form-ffi = { path = "crates/form-ffi" }
 
 serde = { version = "1", features = ["derive"] }
