@@ -120,11 +120,12 @@ struct MarkdownBlocksView: View {
     .frame(width: 900)
 }
 
-#Preview("markdown — line numbers and wrap") {
+/// The shape a user bubble asks for (W10): no copy button, no selection of its own.
+#Preview("markdown — inside a user bubble") {
     ThemePreview {
         MarkdownView(
-            doc: MarkdownFixture.codeOnly,
-            style: MarkdownStyle(showLineNumbers: true, wrapCode: false))
+            doc: MarkdownFixture.streamingTail,
+            style: MarkdownStyle(showsCopyButton: false, isSelectable: false))
     }
     .frame(width: 900)
 }

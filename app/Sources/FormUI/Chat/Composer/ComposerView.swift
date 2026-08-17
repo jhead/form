@@ -15,10 +15,6 @@ struct ComposerView: View {
     @State private var isTargetedForDrop = false
 
     private var chat: ChatStore { stores.chat }
-    private var session: SessionSummary? { stores.sessions.selected }
-    private var modelRef: ModelRef {
-        session?.modelRef ?? stores.settings.settings.defaults.modelRef
-    }
 
     private var canSend: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -35,7 +31,8 @@ struct ComposerView: View {
                 isStreaming: chat.isStreaming,
                 canSend: canSend,
                 onSend: send,
-                onStop: stop)
+                onStop: stop,
+                onAttach: chooseAttachments)
         }
         .frame(maxWidth: theme.metrics.composerMaxWidth)
         .padding(.horizontal, theme.metrics.spacing.xxxl)
@@ -98,10 +95,34 @@ struct ComposerView: View {
         Task { try? await chat.abort() }
     }
 
+    /// The `+` button (F3.1). Both this and the drop path end at the same command, so the
+    /// core's registry — hashing, dedupe, size and type rejection — is the only gatekeeper.
+    private func chooseAttachments() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.prompt = "Attach"
+        guard panel.runModal() == .OK else { return }
+        for url in panel.urls { attach(url) }
+    }
+
+    private func attach(_ url: URL) {
+        guard let sessionId = chat.sessionId else { return }
+        let mime = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType
+            ?? "application/octet-stream"
+        Task {
+            try? await stores.client.dispatch(
+                .addAttachment(
+                    sessionId: sessionId, path: url.path, filename: url.lastPathComponent,
+                    mime: mime))
+        }
+    }
+
     /// Files and images dropped on the composer (F3.1). The tray that shows them is W13's;
     /// the drop target is the composer's.
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard let sessionId = chat.sessionId else { return false }
+        guard chat.sessionId != nil else { return false }
         var accepted = false
         for provider in providers where provider.hasItemConformingToTypeIdentifier(
             UTType.fileURL.identifier)
@@ -109,14 +130,7 @@ struct ComposerView: View {
             accepted = true
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
                 guard let url else { return }
-                let mime = UTType(filenameExtension: url.pathExtension)?
-                    .preferredMIMEType ?? "application/octet-stream"
-                Task { @MainActor in
-                    try? await stores.client.dispatch(
-                        .addAttachment(
-                            sessionId: sessionId, path: url.path,
-                            filename: url.lastPathComponent, mime: mime))
-                }
+                Task { @MainActor in attach(url) }
             }
         }
         return accepted

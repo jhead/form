@@ -130,6 +130,94 @@ public struct ThemeMode: OpenStringValue {
     public static let all: [ThemeMode] = [.light, .dark, .system]
 }
 
+public struct Density: OpenStringValue {
+    public var rawValue: String
+    public init(_ rawValue: String) { self.rawValue = rawValue }
+
+    public static let comfortable = Density("comfortable")
+    public static let compact = Density("compact")
+
+    public static let all: [Density] = [.comfortable, .compact]
+
+    public var displayName: String {
+        switch self {
+        case .comfortable: "Comfortable"
+        case .compact: "Compact"
+        default: rawValue.capitalized
+        }
+    }
+}
+
+/// What the app opens on (F9.1).
+public struct StartupView: OpenStringValue {
+    public var rawValue: String
+    public init(_ rawValue: String) { self.rawValue = rawValue }
+
+    public static let home = StartupView("home")
+    public static let lastSession = StartupView("lastSession")
+
+    public static let all: [StartupView] = [.home, .lastSession]
+
+    public var displayName: String {
+        switch self {
+        case .home: "Home"
+        case .lastSession: "Last session"
+        default: rawValue.capitalized
+        }
+    }
+}
+
+/// Whether a turn's tool calls run one at a time or together.
+public struct ToolExecution: OpenStringValue {
+    public var rawValue: String
+    public init(_ rawValue: String) { self.rawValue = rawValue }
+
+    public static let sequential = ToolExecution("sequential")
+    public static let parallel = ToolExecution("parallel")
+
+    public static let all: [ToolExecution] = [.sequential, .parallel]
+
+    public var displayName: String {
+        switch self {
+        case .sequential: "One at a time"
+        case .parallel: "In parallel"
+        default: rawValue.capitalized
+        }
+    }
+}
+
+/// What sending during a live run does (F1.7).
+public struct QueueMode: OpenStringValue {
+    public var rawValue: String
+    public init(_ rawValue: String) { self.rawValue = rawValue }
+
+    public static let queue = QueueMode("queue")
+    public static let interrupt = QueueMode("interrupt")
+
+    public static let all: [QueueMode] = [.queue, .interrupt]
+
+    public var displayName: String {
+        switch self {
+        case .queue: "Queue"
+        case .interrupt: "Interrupt"
+        default: rawValue.capitalized
+        }
+    }
+}
+
+public struct LogLevel: OpenStringValue {
+    public var rawValue: String
+    public init(_ rawValue: String) { self.rawValue = rawValue }
+
+    public static let error = LogLevel("error")
+    public static let warn = LogLevel("warn")
+    public static let info = LogLevel("info")
+    public static let debug = LogLevel("debug")
+    public static let trace = LogLevel("trace")
+
+    public static let all: [LogLevel] = [.error, .warn, .info, .debug, .trace]
+}
+
 /// The dashboard's period selector (F11). Swift picks the value, so a closed enum is right.
 public enum StatsRange: String, Codable, Sendable, Hashable, CaseIterable {
     case d7, d30, all

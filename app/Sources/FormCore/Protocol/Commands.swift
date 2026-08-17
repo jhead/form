@@ -30,6 +30,10 @@ public enum CoreCommand: Sendable, Equatable {
         sessionId: String?, path: String? = nil, bytesBase64: String? = nil, filename: String,
         mime: String)
     case removeAttachment(attachmentId: String)
+    /// Thumbnailing needs platform image APIs, so it happens in the app layer — but the
+    /// path belongs in the store, or a future Windows/Linux client cannot find what was
+    /// already rendered.
+    case setAttachmentThumbnail(attachmentId: String, path: String)
     case branchFromMessage(sessionId: String, entryId: String)
     case retryMessage(sessionId: String, entryId: String)
 
@@ -53,6 +57,7 @@ public enum CoreCommand: Sendable, Equatable {
         case .updateSettings: "updateSettings"
         case .addAttachment: "addAttachment"
         case .removeAttachment: "removeAttachment"
+        case .setAttachmentThumbnail: "setAttachmentThumbnail"
         case .branchFromMessage: "branchFromMessage"
         case .retryMessage: "retryMessage"
         }
@@ -154,6 +159,9 @@ extension CoreCommand: Codable {
             )
         case "removeAttachment":
             self = .removeAttachment(attachmentId: try string(.attachmentId))
+        case "setAttachmentThumbnail":
+            self = .setAttachmentThumbnail(
+                attachmentId: try string(.attachmentId), path: try string(.path))
         case "branchFromMessage":
             self = .branchFromMessage(
                 sessionId: try string(.sessionId), entryId: try string(.entryId))
@@ -225,6 +233,9 @@ extension CoreCommand: Codable {
             try c.encode(mime, forKey: .mime)
         case let .removeAttachment(attachmentId):
             try c.encode(attachmentId, forKey: .attachmentId)
+        case let .setAttachmentThumbnail(attachmentId, path):
+            try c.encode(attachmentId, forKey: .attachmentId)
+            try c.encode(path, forKey: .path)
         case let .branchFromMessage(sessionId, entryId), let .retryMessage(sessionId, entryId):
             try c.encode(sessionId, forKey: .sessionId)
             try c.encode(entryId, forKey: .entryId)

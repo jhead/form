@@ -66,12 +66,15 @@ public struct SidebarView: View {
                     }
                     .background(theme.color.backgroundSidebar)
                 }
-                // `idealHeight` is the load-bearing part: a scroll view reports its content
-                // as its ideal size, and the split view asks the sidebar for exactly that
-                // when it decides how tall to be. Pinning the ideal to the window minimum
-                // keeps a 26-row corpus from making the window 1600 pt tall.
+                // Both bounds are load-bearing. A scroll view reports its content as its
+                // ideal *and* passes its content's minimum up, and `NavigationSplitView`
+                // sizes itself to the taller column's demand — so without an explicit
+                // `minHeight: 0` and a modest `idealHeight`, a 26-row corpus makes the split
+                // view 1600 pt tall and it overflows off the top and bottom of the window.
                 .frame(
+                    minWidth: 0,
                     maxWidth: .infinity,
+                    minHeight: 0,
                     idealHeight: theme.metrics.windowMinHeight,
                     maxHeight: .infinity)
                 .sidebarBackground()
@@ -187,10 +190,7 @@ public struct SidebarView: View {
             .padding(.bottom, theme.metrics.spacing.lg)
         }
         .scrollContentBackground(.hidden)
-        // The sidebar column proposes its content's ideal height, so without this the scroll
-        // view claims the full height of every row and the fixed rows above and the footer
-        // below get pushed out of the window.
-        .frame(maxHeight: .infinity)
+        .frame(minHeight: 0, idealHeight: 0, maxHeight: .infinity)
         // A drag released outside every target still has to clear the indicator.
         .onChange(of: dragState.isDragging) { _, isDragging in
             if !isDragging { dragState.target = nil }

@@ -54,7 +54,7 @@ struct ModelsTab: View {
                 emptyTitle: "Nothing to tabulate yet",
                 emptyMessage: "Model rows appear once a run reports usage."
             ) {
-                ModelTable(models: stats.models, metrics: metrics)
+                ModelTable(models: stats.models, providerNames: providerNames, metrics: metrics)
             }
 
             HStack(alignment: .top, spacing: theme.metrics.spacing.xl) {
@@ -111,6 +111,11 @@ struct ModelsTab: View {
     // MARK: Rows
 
     private var isSparse: Bool { stats.headline.activeDays < 3 }
+
+    private var providerNames: [String: String] {
+        Dictionary(
+            stats.providers.map { ($0.providerId, $0.name) }, uniquingKeysWith: { first, _ in first })
+    }
 
     private var displayNames: [String: String] {
         Dictionary(

@@ -103,6 +103,7 @@ struct ProtocolCodableTests {
             .addAttachment(
                 sessionId: "s", path: "/tmp/a.png", filename: "a.png", mime: "image/png"),
             .removeAttachment(attachmentId: "att"),
+            .setAttachmentThumbnail(attachmentId: "att", path: "/tmp/thumb.png"),
             .branchFromMessage(sessionId: "s", entryId: "e"),
             .retryMessage(sessionId: "s", entryId: "e"),
         ]
@@ -269,22 +270,104 @@ struct ProtocolCodableTests {
 
     @Test("settings keep fields this build does not know about")
     func settingsPreserveUnknownFields() throws {
+        // A document from a newer core: a whole section this build has never heard of, and a
+        // field inside one it has.
         let json = """
             {"version":1,"general":{"startupView":"home","confirmOnDelete":true,\
-            "autoTitleSessions":true,"telemetry":false},"appearance":{"themeMode":"dark",\
-            "textSizeMultiplier":1,"sidebarWidth":300,"sidebarCollapsed":false,\
-            "showTurnFooters":true},"defaults":{"modelRef":{"providerId":"anthropic",\
-            "modelId":"claude-opus-5","thinkingLevel":"high"},"systemPrompt":""},\
-            "providers":{"anthropic":{"enabled":true,"hasKey":true}},\
-            "experiments":{"newSidebar":true}}
+            "autoTitleSessions":true,"telemetry":true,"soundOnComplete":"chime"},\
+            "appearance":{"themeMode":"dark","textSizeMultiplier":1,"sidebarWidth":300,\
+            "sidebarCollapsed":false,"density":"compact","showTurnFooters":true},\
+            "defaults":{"modelRef":{"providerId":"anthropic","modelId":"claude-opus-5",\
+            "thinkingLevel":"high"},"systemPrompt":"","toolExecution":"sequential",\
+            "queueMode":"interrupt"},"providers":{"anthropic":{"enabled":true,\
+            "hasKey":true}},"experiments":{"newSidebar":true}}
             """
         let settings = try JSONDecoder().decode(Settings.self, from: Data(json.utf8))
         #expect(settings.appearance.themeMode == .dark)
+        #expect(settings.appearance.density == .compact)
+        #expect(settings.general.telemetry)
+        #expect(settings.defaults.toolExecution == .sequential)
+        #expect(settings.defaults.queueMode == .interrupt)
         #expect(settings.unknown["experiments"]?["newSidebar"]?.boolValue == true)
-        #expect(settings.general.unknown["telemetry"]?.boolValue == false)
+        #expect(settings.general.unknown["soundOnComplete"]?.stringValue == "chime")
 
-        let (original, reencoded) = try roundTrip(json, as: Settings.self)
-        #expect(reencoded == original, "an unknown setting was dropped on the way back")
+        // Sections the document omitted are materialized from the defaults — the core would
+        // have filled them in anyway — but nothing it *did* carry may be lost.
+        let reencoded = try JSONValue(data: JSONEncoder().encode(settings)).normalized
+        #expect(reencoded["experiments"]?["newSidebar"]?.boolValue == true)
+        #expect(reencoded["general"]?["soundOnComplete"]?.stringValue == "chime")
+        #expect(reencoded["general"]?["telemetry"]?.boolValue == true)
+        #expect(reencoded["defaults"]?["queueMode"]?.stringValue == "interrupt")
+
+        for (key, value) in try #require(try JSONValue(jsonString: json).normalized.objectValue) {
+            guard case let .object(members) = value else {
+                #expect(reencoded[key] == value, "\(key) was dropped")
+                continue
+            }
+            for (inner, innerValue) in members {
+                #expect(reencoded[key]?[inner] == innerValue, "\(key).\(inner) was dropped")
+            }
+        }
+    }
+
+    /// Defaults must match the Rust `Default` impls: a control binds to this before the
+    /// first `settings_changed` arrives, and a disagreement shows up as a toggle that jumps
+    /// on load.
+    @Test("settings defaults match the core's")
+    func settingsDefaults() {
+        let settings = Settings()
+        #expect(settings.general.startupView == .home)
+        #expect(settings.general.confirmOnDelete)
+        #expect(settings.general.autoTitleSessions)
+        #expect(settings.general.telemetry == false)
+
+        #expect(settings.appearance.themeMode == .system)
+        #expect(settings.appearance.density == .comfortable)
+        #expect(settings.appearance.textSizeMultiplier == 1)
+        #expect(settings.appearance.sidebarWidth == 300)
+        #expect(settings.appearance.showTurnFooters)
+
+        #expect(settings.defaults.toolExecution == .parallel)
+        #expect(settings.defaults.queueMode == .queue)
+        #expect(settings.defaults.modelRef.modelId == "claude-opus-5")
+
+        #expect(settings.editor.font == "SF Mono")
+        #expect(settings.editor.fontSize == 12)
+        #expect(settings.editor.tabWidth == 4)
+        #expect(settings.editor.wrapCode == false)
+        #expect(settings.editor.showLineNumbers)
+
+        #expect(settings.advanced.logLevel == .info)
+        #expect(settings.advanced.harnessSpeed == 1)
+
+        #expect(ProviderSettings().enabled, "the core enables a provider by default")
+    }
+
+    @Test("the whole settings document round-trips with nothing in the unknown bag")
+    func settingsFullDocument() throws {
+        // The core's own fixture, so this fails the moment W4 adds a field this build has no
+        // property for — rather than quietly parking it in `unknown`.
+        let url = ProtocolFixtures.directory
+            .appendingPathComponent("events/settings_changed.json")
+        guard let data = try? Data(contentsOf: url) else { return }
+
+        let event = try JSONDecoder().decode(CoreEvent.self, from: data)
+        guard case let .settingsChanged(settings) = event.kind else {
+            Issue.record("expected settings_changed")
+            return
+        }
+        #expect(settings.unknown.isEmpty, "unmodelled top-level keys: \(settings.unknown.keys)")
+        #expect(settings.general.unknown.isEmpty)
+        #expect(settings.appearance.unknown.isEmpty)
+        #expect(settings.defaults.unknown.isEmpty)
+        #expect(settings.editor.unknown.isEmpty)
+        #expect(settings.advanced.unknown.isEmpty)
+        #expect(settings.providers.values.allSatisfy { $0.unknown.isEmpty })
+
+        #expect(settings.general.telemetry)
+        #expect(settings.defaults.toolExecution == .parallel)
+        #expect(settings.defaults.queueMode == .queue)
+        #expect(settings.shortcuts["session.new"] == "cmd+n")
     }
 
     @Test("a mutated setting still carries the unknown fields")

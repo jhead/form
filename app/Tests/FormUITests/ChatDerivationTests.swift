@@ -8,8 +8,8 @@ import Testing
 /// rules in F1.3, the transcript grouping in spec 10 §1, the markdown debounce's
 /// block-boundary rule in spec 10 §2, and the 40 pt scroll pin in the same section.
 ///
-/// **Needs one line in `app/Package.swift`** — `.testTarget(name: "FormUITests",
-/// dependencies: ["FormUI"])` — which W10 does not own. See the W10 report.
+/// The views themselves are covered by `#Preview`s and by the harness runs recorded in the
+/// W10 report; what is testable without a render loop is here.
 struct ChatFormatTests {
     @Test("token counts read the way the reference prints them")
     func compactTokens() {
@@ -305,6 +305,20 @@ struct TranscriptScrollTests {
 
         metrics.offset = 1_259
         #expect(!metrics.isAtBottom)
+    }
+
+    @Test("a few points of relayout clamp is not a scroll gesture")
+    func clampIsNotIntent() {
+        let state = TranscriptScrollState()
+        state.route(to: "s")
+        state.update(TranscriptMetrics(contentHeight: 2_000, offset: 0, viewportHeight: 700))
+        state.update(TranscriptMetrics(contentHeight: 2_000, offset: 1_300, viewportHeight: 700))
+        #expect(state.isPinned)
+
+        // A long message re-lays out and the offset clamps back by a few points, twice.
+        state.update(TranscriptMetrics(contentHeight: 2_100, offset: 1_294, viewportHeight: 700))
+        state.update(TranscriptMetrics(contentHeight: 2_200, offset: 1_290, viewportHeight: 700))
+        #expect(state.isPinned)
     }
 
     @Test("content growing under the viewport does not unpin the follow")

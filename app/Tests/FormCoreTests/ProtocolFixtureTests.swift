@@ -182,7 +182,7 @@ enum ProtocolFixtures {
         "archiveSession", "pinSession", "moveSession", "createGroup", "renameGroup",
         "deleteGroup", "reorderGroup", "setGroupCollapsed", "setSessionModel",
         "setWorkspaceRoot", "updateSettings", "addAttachment", "removeAttachment",
-        "branchFromMessage", "retryMessage",
+        "setAttachmentThumbnail", "branchFromMessage", "retryMessage",
     ]
 
     static let eventTags = [

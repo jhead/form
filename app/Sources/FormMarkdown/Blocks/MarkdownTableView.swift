@@ -56,7 +56,11 @@ struct MarkdownTableView: View {
             .padding(.vertical, metrics.cellPaddingV)
     }
 
-    /// Zebra at 3% surface tint (`metrics.zebraOpacity`), on alternate body rows.
+    /// Zebra at 3% (`metrics.zebraOpacity`), on alternate body rows.
+    ///
+    /// The tint is `textPrimary`, not `surface`: `surface` over `background` is a one-step
+    /// difference in both themes, so a 3% wash of it is invisible. A 3% wash of the text
+    /// color is the stripe the spec is describing, and it inverts correctly with the theme.
     private func zebra(_ index: Int) -> ThemeColor {
         index.isMultiple(of: 2)
             ? metrics.theme.color.surface.opacity(0)

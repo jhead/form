@@ -10,6 +10,8 @@ struct SessionHeaderView: View {
     let session: SessionSummary
     let commands: SessionCommands
     let appState: AppState
+    /// W13 owns the picker, its recents list and the Clear action; the header only places it.
+    let workspace: WorkspaceRootController
 
     @State private var isRenaming = false
     @State private var deleteTarget: SessionSummary?
@@ -19,7 +21,7 @@ struct SessionHeaderView: View {
     var body: some View {
         HStack(spacing: theme.metrics.spacing.md) {
             title
-            workspaceChip
+            WorkspaceFolderChip(controller: workspace)
             if session.status == .streaming {
                 PulsingDot()
                     .accessibilityLabel("Streaming")
@@ -109,15 +111,6 @@ struct SessionHeaderView: View {
                 .accessibilityValue(session.title)
                 .accessibilityHint("Double-click to rename")
         }
-    }
-
-    /// F4.5: a session with no root says so rather than showing nothing.
-    private var workspaceChip: some View {
-        Chip(
-            session.workspaceName ?? "Unconfined",
-            systemImage: session.workspaceRoot == nil ? "folder.badge.questionmark" : "folder",
-            tooltip: session.workspaceRoot
-        )
     }
 
     private func requestDelete() {

@@ -20,6 +20,7 @@ public struct RootView<HomeContent: View, SessionContent: View>: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var ungroupedCollapsed = ShellRestoration.ungroupedCollapsed
     @State private var didRestore = false
+    @State private var workspace: WorkspaceRootController
 
     public init(
         stores: CoreStores,
@@ -35,6 +36,7 @@ public struct RootView<HomeContent: View, SessionContent: View>: View {
         self.toasts = toasts
         self.home = home
         self.session = session
+        _workspace = State(initialValue: WorkspaceRootController(stores: stores))
     }
 
     public var body: some View {
@@ -53,7 +55,8 @@ public struct RootView<HomeContent: View, SessionContent: View>: View {
             )
         } detail: {
             ContentShell(
-                stores: stores, appState: appState, home: home, session: session)
+                stores: stores, appState: appState, workspace: workspace,
+                home: home, session: session)
         }
         .navigationSplitViewStyle(.balanced)
         // `maxHeight` is not decoration: `NavigationSplitView` sizes itself to the taller
@@ -101,9 +104,14 @@ public struct RootView<HomeContent: View, SessionContent: View>: View {
         .onChange(of: appState.sidebarCollapsed) { _, collapsed in
             let wanted: NavigationSplitViewVisibility = collapsed ? .detailOnly : .all
             if columnVisibility != wanted { columnVisibility = wanted }
+            // Not before `restore()`: the split view reports a visibility of its own during
+            // the first layout pass, and persisting that would write the restored value back
+            // over itself with whatever the first frame happened to be.
+            guard didRestore else { return }
             persist { $0.appearance.sidebarCollapsed = collapsed }
         }
         .onChange(of: columnVisibility) { _, visibility in
+            guard didRestore else { return }
             let collapsed = visibility == .detailOnly
             if appState.sidebarCollapsed != collapsed { appState.sidebarCollapsed = collapsed }
         }

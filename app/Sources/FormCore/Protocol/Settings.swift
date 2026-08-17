@@ -7,20 +7,26 @@ import Foundation
 /// **API keys are never in this document and never cross the FFI boundary.** Swift owns
 /// Keychain storage (`KeychainStore`); the core records only `hasKey` per provider (F8.5).
 ///
-/// Every level carries an `unknown` bag. W4 is still adding sections, and a build that
-/// dropped the keys it did not recognize would silently delete a setting made in a newer
-/// build the next time the user changed anything (spec 04 §2: unknown fields survive a
-/// round trip).
+/// Every level carries an `unknown` bag, mirroring the core's `#[serde(flatten)] extra`. A
+/// build that dropped the keys it did not recognize would silently delete a setting made in
+/// a newer build the next time the user changed anything.
+///
+/// Defaults here must match the Rust `Default` impls exactly: this type is also what a
+/// preferences control binds to before the first `settings_changed` arrives, so a
+/// disagreement would show as a toggle that jumps on load.
 public struct Settings: Codable, Sendable, Equatable {
     public var version: Int
     public var general: GeneralSettings
     public var appearance: AppearanceSettings
     public var defaults: DefaultsSettings
+    /// Keyed by catalog provider id. The core fills in an entry for every known provider, so
+    /// the Providers tab can render without consulting the catalog for presence.
     public var providers: [String: ProviderSettings]
-    public var editor: EditorSettings?
-    public var advanced: AdvancedSettings?
-    /// Action id → key equivalent. Overrides only (F12.3).
-    public var shortcuts: [String: String]?
+    public var editor: EditorSettings
+    public var advanced: AdvancedSettings
+    /// Overrides only: action id → key equivalent. An absent entry means "use the default"
+    /// (F12.3).
+    public var shortcuts: [String: String]
     public var unknown: [String: JSONValue]
 
     public init(
@@ -29,9 +35,9 @@ public struct Settings: Codable, Sendable, Equatable {
         appearance: AppearanceSettings = AppearanceSettings(),
         defaults: DefaultsSettings = DefaultsSettings(),
         providers: [String: ProviderSettings] = [:],
-        editor: EditorSettings? = nil,
-        advanced: AdvancedSettings? = nil,
-        shortcuts: [String: String]? = nil,
+        editor: EditorSettings = EditorSettings(),
+        advanced: AdvancedSettings = AdvancedSettings(),
+        shortcuts: [String: String] = [:],
         unknown: [String: JSONValue] = [:]
     ) {
         self.version = version
@@ -61,9 +67,9 @@ public struct Settings: Codable, Sendable, Equatable {
         appearance = try c.decodeIfPresent(AppearanceSettings.self, forKey: .appearance) ?? .init()
         defaults = try c.decodeIfPresent(DefaultsSettings.self, forKey: .defaults) ?? .init()
         providers = try c.decodeIfPresent([String: ProviderSettings].self, forKey: .providers) ?? [:]
-        editor = try c.decodeIfPresent(EditorSettings.self, forKey: .editor)
-        advanced = try c.decodeIfPresent(AdvancedSettings.self, forKey: .advanced)
-        shortcuts = try c.decodeIfPresent([String: String].self, forKey: .shortcuts)
+        editor = try c.decodeIfPresent(EditorSettings.self, forKey: .editor) ?? .init()
+        advanced = try c.decodeIfPresent(AdvancedSettings.self, forKey: .advanced) ?? .init()
+        shortcuts = try c.decodeIfPresent([String: String].self, forKey: .shortcuts) ?? [:]
         unknown = try decodeUnknownKeys(from: decoder, known: Self.knownKeys)
     }
 
@@ -74,9 +80,9 @@ public struct Settings: Codable, Sendable, Equatable {
         try c.encode(appearance, forKey: .appearance)
         try c.encode(defaults, forKey: .defaults)
         try c.encode(providers, forKey: .providers)
-        try c.encodeIfPresent(editor, forKey: .editor)
-        try c.encodeIfPresent(advanced, forKey: .advanced)
-        try c.encodeIfPresent(shortcuts, forKey: .shortcuts)
+        try c.encode(editor, forKey: .editor)
+        try c.encode(advanced, forKey: .advanced)
+        try c.encode(shortcuts, forKey: .shortcuts)
         try encodeUnknownKeys(unknown, to: encoder)
     }
 
@@ -86,32 +92,40 @@ public struct Settings: Codable, Sendable, Equatable {
 }
 
 public struct GeneralSettings: Codable, Sendable, Equatable {
-    public var startupView: String
+    public var startupView: StartupView
     public var confirmOnDelete: Bool
     public var autoTitleSessions: Bool
+    /// Opt-in, off by default, and nothing reads it yet.
+    public var telemetry: Bool
     public var unknown: [String: JSONValue]
 
     public init(
-        startupView: String = "home", confirmOnDelete: Bool = true,
-        autoTitleSessions: Bool = true, unknown: [String: JSONValue] = [:]
+        startupView: StartupView = .home, confirmOnDelete: Bool = true,
+        autoTitleSessions: Bool = true, telemetry: Bool = false,
+        unknown: [String: JSONValue] = [:]
     ) {
         self.startupView = startupView
         self.confirmOnDelete = confirmOnDelete
         self.autoTitleSessions = autoTitleSessions
+        self.telemetry = telemetry
         self.unknown = unknown
     }
 
     private enum CodingKeys: String, CodingKey {
-        case startupView, confirmOnDelete, autoTitleSessions
+        case startupView, confirmOnDelete, autoTitleSessions, telemetry
     }
+
+    private static let knownKeys: Set<String> = [
+        "startupView", "confirmOnDelete", "autoTitleSessions", "telemetry",
+    ]
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        startupView = try c.decodeIfPresent(String.self, forKey: .startupView) ?? "home"
+        startupView = try c.decodeIfPresent(StartupView.self, forKey: .startupView) ?? .home
         confirmOnDelete = try c.decodeIfPresent(Bool.self, forKey: .confirmOnDelete) ?? true
         autoTitleSessions = try c.decodeIfPresent(Bool.self, forKey: .autoTitleSessions) ?? true
-        unknown = try decodeUnknownKeys(
-            from: decoder, known: ["startupView", "confirmOnDelete", "autoTitleSessions"])
+        telemetry = try c.decodeIfPresent(Bool.self, forKey: .telemetry) ?? false
+        unknown = try decodeUnknownKeys(from: decoder, known: Self.knownKeys)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -119,6 +133,7 @@ public struct GeneralSettings: Codable, Sendable, Equatable {
         try c.encode(startupView, forKey: .startupView)
         try c.encode(confirmOnDelete, forKey: .confirmOnDelete)
         try c.encode(autoTitleSessions, forKey: .autoTitleSessions)
+        try c.encode(telemetry, forKey: .telemetry)
         try encodeUnknownKeys(unknown, to: encoder)
     }
 }
@@ -128,30 +143,39 @@ public struct AppearanceSettings: Codable, Sendable, Equatable {
     public var textSizeMultiplier: Double
     public var sidebarWidth: Double
     public var sidebarCollapsed: Bool
+    public var density: Density
     public var showTurnFooters: Bool
-    /// W4 adds this; typed here because the preferences surface needs a name for it.
-    public var density: String?
     public var unknown: [String: JSONValue]
+
+    /// The core clamps to these; the app uses them for slider bounds so the value never
+    /// jumps when the echo comes back.
+    public static let textSizeRange: ClosedRange<Double> = 0.85...1.4
+    public static let sidebarWidthRange: ClosedRange<Double> = 220...420
 
     public init(
         themeMode: ThemeMode = .system, textSizeMultiplier: Double = 1.0,
         sidebarWidth: Double = 300, sidebarCollapsed: Bool = false,
-        showTurnFooters: Bool = true, density: String? = nil,
+        density: Density = .comfortable, showTurnFooters: Bool = true,
         unknown: [String: JSONValue] = [:]
     ) {
         self.themeMode = themeMode
         self.textSizeMultiplier = textSizeMultiplier
         self.sidebarWidth = sidebarWidth
         self.sidebarCollapsed = sidebarCollapsed
-        self.showTurnFooters = showTurnFooters
         self.density = density
+        self.showTurnFooters = showTurnFooters
         self.unknown = unknown
     }
 
     private enum CodingKeys: String, CodingKey {
-        case themeMode, textSizeMultiplier, sidebarWidth, sidebarCollapsed, showTurnFooters
-        case density
+        case themeMode, textSizeMultiplier, sidebarWidth, sidebarCollapsed, density
+        case showTurnFooters
     }
+
+    private static let knownKeys: Set<String> = [
+        "themeMode", "textSizeMultiplier", "sidebarWidth", "sidebarCollapsed", "density",
+        "showTurnFooters",
+    ]
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -159,15 +183,9 @@ public struct AppearanceSettings: Codable, Sendable, Equatable {
         textSizeMultiplier = try c.decodeIfPresent(Double.self, forKey: .textSizeMultiplier) ?? 1
         sidebarWidth = try c.decodeIfPresent(Double.self, forKey: .sidebarWidth) ?? 300
         sidebarCollapsed = try c.decodeIfPresent(Bool.self, forKey: .sidebarCollapsed) ?? false
+        density = try c.decodeIfPresent(Density.self, forKey: .density) ?? .comfortable
         showTurnFooters = try c.decodeIfPresent(Bool.self, forKey: .showTurnFooters) ?? true
-        density = try c.decodeIfPresent(String.self, forKey: .density)
-        unknown = try decodeUnknownKeys(
-            from: decoder,
-            known: [
-                "themeMode", "textSizeMultiplier", "sidebarWidth", "sidebarCollapsed",
-                "showTurnFooters", "density",
-            ]
-        )
+        unknown = try decodeUnknownKeys(from: decoder, known: Self.knownKeys)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -176,43 +194,64 @@ public struct AppearanceSettings: Codable, Sendable, Equatable {
         try c.encode(textSizeMultiplier, forKey: .textSizeMultiplier)
         try c.encode(sidebarWidth, forKey: .sidebarWidth)
         try c.encode(sidebarCollapsed, forKey: .sidebarCollapsed)
+        try c.encode(density, forKey: .density)
         try c.encode(showTurnFooters, forKey: .showTurnFooters)
-        try c.encodeIfPresent(density, forKey: .density)
         try encodeUnknownKeys(unknown, to: encoder)
     }
 }
 
 public struct DefaultsSettings: Codable, Sendable, Equatable {
+    /// Carries the default thinking level as part of the ref, exactly as a session does.
     public var modelRef: ModelRef
     public var systemPrompt: String
+    public var toolExecution: ToolExecution
+    public var queueMode: QueueMode
     public var unknown: [String: JSONValue]
 
+    /// A system prompt longer than this is a paste accident, not a preference.
+    public static let systemPromptMaxCharacters = 32_000
+
+    public static let defaultModelRef = ModelRef(
+        providerId: "anthropic", modelId: "claude-opus-5", thinkingLevel: .high)
+
     public init(
-        modelRef: ModelRef = ModelRef(
-            providerId: "anthropic", modelId: "claude-opus-5", thinkingLevel: .high),
+        modelRef: ModelRef = DefaultsSettings.defaultModelRef,
         systemPrompt: String = "",
+        toolExecution: ToolExecution = .parallel,
+        queueMode: QueueMode = .queue,
         unknown: [String: JSONValue] = [:]
     ) {
         self.modelRef = modelRef
         self.systemPrompt = systemPrompt
+        self.toolExecution = toolExecution
+        self.queueMode = queueMode
         self.unknown = unknown
     }
 
-    private enum CodingKeys: String, CodingKey { case modelRef, systemPrompt }
+    private enum CodingKeys: String, CodingKey {
+        case modelRef, systemPrompt, toolExecution, queueMode
+    }
+
+    private static let knownKeys: Set<String> = [
+        "modelRef", "systemPrompt", "toolExecution", "queueMode",
+    ]
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        modelRef =
-            try c.decodeIfPresent(ModelRef.self, forKey: .modelRef)
-            ?? ModelRef(providerId: "anthropic", modelId: "claude-opus-5", thinkingLevel: .high)
+        modelRef = try c.decodeIfPresent(ModelRef.self, forKey: .modelRef) ?? Self.defaultModelRef
         systemPrompt = try c.decodeIfPresent(String.self, forKey: .systemPrompt) ?? ""
-        unknown = try decodeUnknownKeys(from: decoder, known: ["modelRef", "systemPrompt"])
+        toolExecution =
+            try c.decodeIfPresent(ToolExecution.self, forKey: .toolExecution) ?? .parallel
+        queueMode = try c.decodeIfPresent(QueueMode.self, forKey: .queueMode) ?? .queue
+        unknown = try decodeUnknownKeys(from: decoder, known: Self.knownKeys)
     }
 
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(modelRef, forKey: .modelRef)
         try c.encode(systemPrompt, forKey: .systemPrompt)
+        try c.encode(toolExecution, forKey: .toolExecution)
+        try c.encode(queueMode, forKey: .queueMode)
         try encodeUnknownKeys(unknown, to: encoder)
     }
 }
@@ -225,7 +264,7 @@ public struct ProviderSettings: Codable, Sendable, Equatable {
     public var unknown: [String: JSONValue]
 
     public init(
-        enabled: Bool = false, baseUrlOverride: String? = nil, hasKey: Bool = false,
+        enabled: Bool = true, baseUrlOverride: String? = nil, hasKey: Bool = false,
         unknown: [String: JSONValue] = [:]
     ) {
         self.enabled = enabled
@@ -238,7 +277,7 @@ public struct ProviderSettings: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
         baseUrlOverride = try c.decodeIfPresent(String.self, forKey: .baseUrlOverride)
         hasKey = try c.decodeIfPresent(Bool.self, forKey: .hasKey) ?? false
         unknown = try decodeUnknownKeys(
@@ -254,18 +293,22 @@ public struct ProviderSettings: Codable, Sendable, Equatable {
     }
 }
 
-/// Not in the core yet (W4). Optional so an absent section stays absent on the way back.
 public struct EditorSettings: Codable, Sendable, Equatable {
-    public var font: String?
-    public var fontSize: Double?
-    public var tabWidth: Int?
-    public var wrapCode: Bool?
-    public var showLineNumbers: Bool?
+    /// Empty means "whatever `FormDesign` calls the default monospace face".
+    public var font: String
+    public var fontSize: Double
+    public var tabWidth: Int
+    public var wrapCode: Bool
+    public var showLineNumbers: Bool
     public var unknown: [String: JSONValue]
 
+    public static let fontSizeRange: ClosedRange<Double> = 9...24
+    public static let tabWidthRange: ClosedRange<Int> = 1...8
+
     public init(
-        font: String? = nil, fontSize: Double? = nil, tabWidth: Int? = nil,
-        wrapCode: Bool? = nil, showLineNumbers: Bool? = nil, unknown: [String: JSONValue] = [:]
+        font: String = "SF Mono", fontSize: Double = 12, tabWidth: Int = 4,
+        wrapCode: Bool = false, showLineNumbers: Bool = true,
+        unknown: [String: JSONValue] = [:]
     ) {
         self.font = font
         self.fontSize = fontSize
@@ -279,39 +322,44 @@ public struct EditorSettings: Codable, Sendable, Equatable {
         case font, fontSize, tabWidth, wrapCode, showLineNumbers
     }
 
+    private static let knownKeys: Set<String> = [
+        "font", "fontSize", "tabWidth", "wrapCode", "showLineNumbers",
+    ]
+
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        font = try c.decodeIfPresent(String.self, forKey: .font)
-        fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize)
-        tabWidth = try c.decodeIfPresent(Int.self, forKey: .tabWidth)
-        wrapCode = try c.decodeIfPresent(Bool.self, forKey: .wrapCode)
-        showLineNumbers = try c.decodeIfPresent(Bool.self, forKey: .showLineNumbers)
-        unknown = try decodeUnknownKeys(
-            from: decoder,
-            known: ["font", "fontSize", "tabWidth", "wrapCode", "showLineNumbers"]
-        )
+        font = try c.decodeIfPresent(String.self, forKey: .font) ?? "SF Mono"
+        fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize) ?? 12
+        tabWidth = try c.decodeIfPresent(Int.self, forKey: .tabWidth) ?? 4
+        wrapCode = try c.decodeIfPresent(Bool.self, forKey: .wrapCode) ?? false
+        showLineNumbers = try c.decodeIfPresent(Bool.self, forKey: .showLineNumbers) ?? true
+        unknown = try decodeUnknownKeys(from: decoder, known: Self.knownKeys)
     }
 
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encodeIfPresent(font, forKey: .font)
-        try c.encodeIfPresent(fontSize, forKey: .fontSize)
-        try c.encodeIfPresent(tabWidth, forKey: .tabWidth)
-        try c.encodeIfPresent(wrapCode, forKey: .wrapCode)
-        try c.encodeIfPresent(showLineNumbers, forKey: .showLineNumbers)
+        try c.encode(font, forKey: .font)
+        try c.encode(fontSize, forKey: .fontSize)
+        try c.encode(tabWidth, forKey: .tabWidth)
+        try c.encode(wrapCode, forKey: .wrapCode)
+        try c.encode(showLineNumbers, forKey: .showLineNumbers)
         try encodeUnknownKeys(unknown, to: encoder)
     }
 }
 
-/// Not in the core yet (W4). `dataDir` is display-only.
 public struct AdvancedSettings: Codable, Sendable, Equatable {
-    public var logLevel: String?
-    public var harnessSpeed: Double?
-    public var dataDir: String?
+    public var logLevel: LogLevel
+    /// Multiplier on stub-harness timings; mirrors `CoreConfig.harnessSpeed`.
+    public var harnessSpeed: Double
+    /// Read-only display value. The core stamps it on load; the app shows it and echoes it
+    /// back unchanged.
+    public var dataDir: String
     public var unknown: [String: JSONValue]
 
+    public static let harnessSpeedRange: ClosedRange<Double> = 0.05...200
+
     public init(
-        logLevel: String? = nil, harnessSpeed: Double? = nil, dataDir: String? = nil,
+        logLevel: LogLevel = .info, harnessSpeed: Double = 1, dataDir: String = "",
         unknown: [String: JSONValue] = [:]
     ) {
         self.logLevel = logLevel
@@ -324,18 +372,18 @@ public struct AdvancedSettings: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        logLevel = try c.decodeIfPresent(String.self, forKey: .logLevel)
-        harnessSpeed = try c.decodeIfPresent(Double.self, forKey: .harnessSpeed)
-        dataDir = try c.decodeIfPresent(String.self, forKey: .dataDir)
+        logLevel = try c.decodeIfPresent(LogLevel.self, forKey: .logLevel) ?? .info
+        harnessSpeed = try c.decodeIfPresent(Double.self, forKey: .harnessSpeed) ?? 1
+        dataDir = try c.decodeIfPresent(String.self, forKey: .dataDir) ?? ""
         unknown = try decodeUnknownKeys(
             from: decoder, known: ["logLevel", "harnessSpeed", "dataDir"])
     }
 
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encodeIfPresent(logLevel, forKey: .logLevel)
-        try c.encodeIfPresent(harnessSpeed, forKey: .harnessSpeed)
-        try c.encodeIfPresent(dataDir, forKey: .dataDir)
+        try c.encode(logLevel, forKey: .logLevel)
+        try c.encode(harnessSpeed, forKey: .harnessSpeed)
+        try c.encode(dataDir, forKey: .dataDir)
         try encodeUnknownKeys(unknown, to: encoder)
     }
 }

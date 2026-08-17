@@ -141,6 +141,69 @@ struct StoreTests {
 
     // MARK: - CoreStores
 
+    /// The stream has one consumer; a module above `FormCore` gets events through this sink
+    /// rather than a second `for await`, which would split the stream instead of copying it.
+    @Test("the extra event sink sees every event, after the stores have applied it")
+    func eventSink() async throws {
+        let transport = MockTransport(replaysRuns: false)
+        let stores = CoreStores(client: CoreClient(mock: transport))
+
+        var seen: [String] = []
+        var sawSessionInStore = false
+        stores.onEvent = { event in
+            seen.append(event.type)
+            if case .sessionCreated = event.kind {
+                sawSessionInStore = stores.sessions.sessions.contains { $0.title == "Sink" }
+            }
+        }
+        try await stores.start()
+
+        try await stores.sessions.createSession(title: "Sink")
+
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while seen.isEmpty, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(seen.contains("session_created"))
+        #expect(sawSessionInStore, "the sink runs after the built-in stores, not before")
+
+        await stores.shutdown()
+    }
+
+    @Test("queue mode follows the settings document")
+    func queueModeFollowsSettings() async throws {
+        let transport = MockTransport(replaysRuns: false)
+        let stores = CoreStores(client: CoreClient(mock: transport))
+        try await stores.start()
+        #expect(stores.chat.queueMode == .queue)
+
+        try await stores.settings.setQueueMode(.interrupt)
+
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while stores.chat.queueMode == .queue, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(stores.chat.queueMode == .interrupt)
+
+        await stores.shutdown()
+    }
+
+    @Test("interrupt mode stops the run and still queues the prompt")
+    func interruptQueues() async throws {
+        let transport = MockTransport(replaysRuns: false)
+        let chat = ChatStore(client: CoreClient(mock: transport))
+        chat.queueMode = .interrupt
+        let summary = SessionSummary(
+            id: "ses_test", title: "t",
+            modelRef: ModelRef(providerId: "anthropic", modelId: "m", thinkingLevel: .off))
+        chat.seed(Session(summary: summary, entries: []))
+        chat.apply(CoreEvent(kind: .runStart(sessionId: "ses_test", runId: "run_1")))
+
+        try await chat.send("stop and do this instead")
+        #expect(chat.queued == ["stop and do this instead"])
+        #expect(transport.commands.contains(.abortRun(sessionId: "ses_test")))
+    }
+
     @Test("error events surface as dismissable toasts")
     func errorToasts() async throws {
         let transport = MockTransport(replaysRuns: false)

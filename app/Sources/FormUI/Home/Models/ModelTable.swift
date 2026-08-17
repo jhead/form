@@ -8,6 +8,9 @@ struct ModelTable: View {
     @Environment(\.theme) private var theme
 
     let models: [ModelStat]
+    /// `providerId` → display name, from `stats.providers`. Without it a provider prints as
+    /// its id, and `openai` title-cases to something no one writes.
+    var providerNames: [String: String] = [:]
     var metrics: HomeMetrics = .standard
 
     @State private var sort: ModelColumn = .tokens
@@ -37,7 +40,7 @@ struct ModelTable: View {
                     }
 
                     ForEach(ModelColumn.allCases.dropFirst()) { column in
-                        Text(column.value(entry.stat))
+                        Text(text(column, entry.stat))
                             .typeStyle(theme.typography.caption)
                             .tabularFigures()
                             .foregroundStyle(color(for: column, entry.stat))
@@ -46,10 +49,10 @@ struct ModelTable: View {
                     }
                 }
                 .frame(height: metrics.tableRowHeight)
-                .background(
-                    theme.color.textPrimary.opacity(
-                        index.isMultiple(of: 2) ? theme.metrics.zebraOpacity : 0)
-                )
+
+                if index < sorted.count - 1 {
+                    FormDivider(color: theme.color.border.opacity(0.6))
+                }
             }
         }
         .frame(minWidth: metrics.tableMinWidth, alignment: .leading)
@@ -80,6 +83,12 @@ struct ModelTable: View {
         }
         .buttonStyle(.plain)
         .help("Sort by \(column.title)")
+    }
+
+    private func text(_ column: ModelColumn, _ stat: ModelStat) -> String {
+        guard column == .provider else { return column.value(stat) }
+        let id = stat.model.providerId
+        return providerNames[id].flatMap { $0.isEmpty ? nil : $0 } ?? id.titleCasedIdentifier
     }
 
     private func color(for column: ModelColumn, _ stat: ModelStat) -> ThemeColor {

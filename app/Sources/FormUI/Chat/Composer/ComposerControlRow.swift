@@ -17,21 +17,27 @@ struct ComposerControlRow: View {
         stores.sessions.selected?.modelRef ?? stores.settings.settings.defaults.modelRef
     }
 
+    let onAttach: () -> Void
+
     var body: some View {
         HStack(spacing: theme.metrics.spacing.md) {
-            Text("Auto")
-                .typeStyle(theme.typography.caption)
-                .foregroundStyle(theme.color.textSecondary)
+            // The reference's mode control. `form` has one mode, so the label and its chevron
+            // are inert rather than a menu with a single item.
+            HStack(spacing: theme.metrics.spacing.xs) {
+                Text("Auto")
+                Image(systemName: "chevron.down")
+                    .typeStyle(theme.typography.micro)
+            }
+            .typeStyle(theme.typography.caption)
+            .foregroundStyle(theme.color.textSecondary)
+            .formTooltip("Agent mode", detail: "form ships a single mode")
 
             IconButton(
                 systemImage: "plus", accessibilityLabel: "Add attachment", size: .small,
-                action: {})
+                action: onAttach)
             IconButton(
                 systemImage: "mic", accessibilityLabel: "Dictate", size: .small, action: {})
                 .disabled(true)
-            IconButton(
-                systemImage: "chevron.down", accessibilityLabel: "More options", size: .small,
-                action: {})
 
             Spacer(minLength: theme.metrics.spacing.lg)
 

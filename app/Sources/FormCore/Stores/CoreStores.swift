@@ -28,6 +28,16 @@ public final class CoreStores {
     public private(set) var diagnostics = CoreDiagnostics(
         droppedEvents: 0, decodeFailures: 0, eventsDelivered: 0)
 
+    /// An extra event sink, called after the built-in stores have applied the event.
+    ///
+    /// The stream has exactly one consumer — this class's pump — so a module above
+    /// `FormCore` that needs raw events (W13's `AttachmentIntake`, which has to learn the id
+    /// the core minted for an attachment) hangs off this rather than opening a second
+    /// `for await`, which would *split* the stream rather than duplicate it. One sink,
+    /// deliberately: if a second consumer ever needs one, this becomes an array of
+    /// observers with a cancellation token, not two mechanisms.
+    @ObservationIgnored public var onEvent: (@MainActor (CoreEvent) -> Void)?
+
     @ObservationIgnored private var pump: Task<Void, Never>?
     /// Set only by `CoreStores.preview`, so a preview can drive its own event log.
     @ObservationIgnored var previewTransport: MockTransport?
@@ -60,8 +70,14 @@ public final class CoreStores {
 
         await catalog.load()
         await settings.load()
+        adoptSettings()
         await sessions.load()
         await stats.refresh()
+    }
+
+    /// Settings that a store needs to behave, rather than to render.
+    private func adoptSettings() {
+        chat.queueMode = settings.settings.defaults.queueMode
     }
 
     /// Select a session and load its transcript — the one call the sidebar, the palette and
@@ -88,6 +104,7 @@ public final class CoreStores {
         chat.apply(event)
         settings.apply(event)
         stats.apply(event)
+        if case .settingsChanged = event.kind { adoptSettings() }
 
         if case let .error(code, message, detail) = event.kind {
             let body = CoreErrorBody(code: code, message: message, detail: detail)
@@ -98,6 +115,9 @@ public final class CoreStores {
 
         let latest = client.diagnostics
         if latest != diagnostics { diagnostics = latest }
+
+        // Last, so a sink sees a fully settled world: stores applied, toasts queued.
+        onEvent?(event)
     }
 
     public func dismissError(_ error: CoreErrorBody) {

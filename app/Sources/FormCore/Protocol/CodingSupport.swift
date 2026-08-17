@@ -56,14 +56,21 @@ func encodeUnknownKeys(_ extra: [String: JSONValue], to encoder: Encoder) throws
 /// structs with known values as statics: unknown values decode, compare and re-encode
 /// intact. Switches over them need a `default`, which is the correct thing to be forced into.
 public protocol OpenStringValue:
-    RawRepresentable, Codable, Sendable, Hashable, CustomStringConvertible, ExpressibleByStringLiteral
+    RawRepresentable, Codable, Sendable, Hashable, Identifiable, CustomStringConvertible,
+    ExpressibleByStringLiteral
 where RawValue == String {
     init(_ rawValue: String)
+    /// What a picker shows. Defaults to the wire value capitalized, which is right often
+    /// enough that only the multi-word vocabularies override it.
+    var displayName: String { get }
 }
 
 extension OpenStringValue {
     public init(rawValue: String) { self.init(rawValue) }
     public init(stringLiteral value: String) { self.init(value) }
+    /// `Identifiable` so these drop straight into a `ForEach` over their `all` list.
+    public var id: String { rawValue }
+    public var displayName: String { rawValue.capitalized }
     public init(from decoder: Decoder) throws {
         self.init(try decoder.singleValueContainer().decode(String.self))
     }

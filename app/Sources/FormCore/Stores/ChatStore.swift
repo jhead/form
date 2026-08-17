@@ -66,6 +66,9 @@ public final class ChatStore {
 
     /// Prompts typed while a run was in flight; sent at the next turn boundary (F1.7).
     public private(set) var queued: [String] = []
+    /// Mirrors `settings.defaults.queueMode`; `CoreStores` keeps it current so the composer
+    /// and the preference never disagree.
+    public var queueMode: QueueMode = .queue
 
     /// How many times `partial` disagreed with the locally-applied deltas. Zero is the
     /// expected value; anything else is drift worth reporting.
@@ -420,7 +423,13 @@ public final class ChatStore {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let sessionId else { return }
         guard !isStreaming else {
+            // Either way the prompt is queued — a run cannot be replaced mid-flight, only
+            // stopped and followed. `interrupt` just stops the current one first, and the
+            // queue drains on `run_end`.
             queued.append(trimmed)
+            if queueMode == .interrupt {
+                try await client.dispatch(.abortRun(sessionId: sessionId))
+            }
             return
         }
         try await client.dispatch(

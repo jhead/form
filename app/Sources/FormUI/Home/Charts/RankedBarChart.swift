@@ -47,7 +47,20 @@ struct RankedBarChart: View {
                 }
             }
         }
-        .formChartValueXAxis(theme, format, desiredCount: 3)
+        .chartXAxis {
+            // Ticks stop at the data's maximum: the domain carries extra headroom for the
+            // trailing annotation, and a tick out there would be clipped by the plot edge.
+            AxisMarks(values: ticks) { value in
+                AxisTick(stroke: StrokeStyle(lineWidth: theme.metrics.hairline * 2))
+                    .foregroundStyle(theme.color.chartAxis)
+                AxisValueLabel {
+                    Text(format.string(value.as(Double.self) ?? 0))
+                        .typeStyle(theme.typography.micro)
+                        .tabularFigures()
+                        .foregroundStyle(theme.color.chartAxis)
+                }
+            }
+        }
         .frame(height: CGFloat(max(rows.count, 1)) * metrics.rankRowHeight)
         .accessibilityElement(children: .contain)
     }
@@ -55,8 +68,14 @@ struct RankedBarChart: View {
     /// Room at the trailing end for the annotation, so the longest bar's value is not
     /// clipped by the plot edge.
     private var headroom: Double {
-        let maximum = rows.map(\.value).max() ?? 0
-        return maximum > 0 ? maximum * 1.28 : 1
+        maximum > 0 ? maximum * 1.28 : 1
+    }
+
+    private var maximum: Double { rows.map(\.value).max() ?? 0 }
+
+    private var ticks: [Double] {
+        guard maximum > 0 else { return [0] }
+        return [0, maximum / 2, maximum]
     }
 }
 

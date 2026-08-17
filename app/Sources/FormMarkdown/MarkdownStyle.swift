@@ -21,6 +21,9 @@ public struct MarkdownStyle: Sendable, Equatable {
     /// action, and a selection inside it competes with dragging the message.
     public var isSelectable: Bool
 
+    /// What a caller with no settings to hand gets — previews, and anywhere markdown is
+    /// shown outside the transcript. Deliberately plainer than `EditorSettings()`'s defaults:
+    /// line numbers are a preference, not a default rendering.
     public static let `default` = MarkdownStyle()
 
     public init(
@@ -39,11 +42,18 @@ public struct MarkdownStyle: Sendable, Equatable {
 
     /// Built from the settings document the core echoes back, so the Editor pane's two
     /// markdown-facing switches take effect without a restart (F9.2).
+    /// A missing `editor` section means the core has not written one yet, not "no
+    /// preferences" — so it falls back to `EditorSettings()`'s own defaults rather than to
+    /// this type's, which would silently disagree with what the Editor pane displays.
+    ///
+    /// `editor.font` (the face name) is not read here: `FormDesign` owns face resolution and
+    /// `TypeTokens` exposes mono by size only. Honouring a named face needs an API there.
     public init(editor: EditorSettings?, showsCopyButton: Bool = true, isSelectable: Bool = true) {
+        let editor = editor ?? EditorSettings()
         self.init(
-            showLineNumbers: editor?.showLineNumbers ?? false,
-            wrapCode: editor?.wrapCode ?? false,
-            codeFontSize: editor?.fontSize.map { CGFloat($0) },
+            showLineNumbers: editor.showLineNumbers,
+            wrapCode: editor.wrapCode,
+            codeFontSize: CGFloat(editor.fontSize),
             showsCopyButton: showsCopyButton,
             isSelectable: isSelectable
         )

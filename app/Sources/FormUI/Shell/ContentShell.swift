@@ -9,6 +9,7 @@ struct ContentShell<HomeContent: View, SessionContent: View>: View {
 
     let stores: CoreStores
     let appState: AppState
+    let workspace: WorkspaceRootController
     let home: () -> HomeContent
     let session: (String) -> SessionContent
 
@@ -32,7 +33,9 @@ struct ContentShell<HomeContent: View, SessionContent: View>: View {
         case let .session(id):
             if let summary = stores.sessions.session(id: id) {
                 VStack(spacing: 0) {
-                    SessionHeaderView(session: summary, commands: commands, appState: appState)
+                    SessionHeaderView(
+                        session: summary, commands: commands, appState: appState,
+                        workspace: workspace)
                     FormDivider()
                     session(id)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)

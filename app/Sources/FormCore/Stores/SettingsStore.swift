@@ -72,8 +72,30 @@ public final class SettingsStore {
         try await update { $0.appearance.textSizeMultiplier = value }
     }
 
+    public func setDensity(_ density: Density) async throws {
+        try await update { $0.appearance.density = density }
+    }
+
     public func setDefaultModel(_ ref: ModelRef) async throws {
         try await update { $0.defaults.modelRef = ref }
+    }
+
+    public func setToolExecution(_ mode: ToolExecution) async throws {
+        try await update { $0.defaults.toolExecution = mode }
+    }
+
+    /// Whether sending during a live run queues the prompt or interrupts the run (F1.7).
+    /// `ChatStore` reads this to decide, so the two never disagree.
+    public func setQueueMode(_ mode: QueueMode) async throws {
+        try await update { $0.defaults.queueMode = mode }
+    }
+
+    public func setStartupView(_ view: StartupView) async throws {
+        try await update { $0.general.startupView = view }
+    }
+
+    public func setTelemetry(_ enabled: Bool) async throws {
+        try await update { $0.general.telemetry = enabled }
     }
 
     // MARK: - API keys
