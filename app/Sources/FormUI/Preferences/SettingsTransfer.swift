@@ -50,11 +50,11 @@ public struct PickedSettingsFile: Sendable {
 /// replaced.
 public enum SettingsTransfer {
     public enum Decoded: Sendable {
-        case success(Settings, notes: [String])
+        case success(FormCore.Settings, notes: [String])
         case invalid(String)
     }
 
-    static func encode(_ settings: Settings) -> Data {
+    static func encode(_ settings: FormCore.Settings) -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return (try? encoder.encode(settings)) ?? Data()
@@ -63,7 +63,7 @@ public enum SettingsTransfer {
     // MARK: - Export
 
     @MainActor
-    static func export(_ settings: Settings) throws -> SettingsTransferReport {
+    static func export(_ settings: FormCore.Settings) throws -> SettingsTransferReport {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "form-settings.json"
         panel.allowedContentTypes = [.json]
@@ -107,9 +107,9 @@ public enum SettingsTransfer {
             return .invalid("\(file.url.lastPathComponent) is not a settings document — the top level must be an object.")
         }
 
-        var settings: Settings
+        var settings: FormCore.Settings
         do {
-            settings = try JSONDecoder().decode(Settings.self, from: file.data)
+            settings = try JSONDecoder().decode(FormCore.Settings.self, from: file.data)
         } catch let DecodingError.typeMismatch(_, context) {
             return .invalid("Wrong type at \(path(context)) in \(file.url.lastPathComponent).")
         } catch let DecodingError.dataCorrupted(context) {
@@ -124,7 +124,7 @@ public enum SettingsTransfer {
 
     /// The same clamps the core applies, run early so the report can name them. The core
     /// remains the authority — this only decides what to tell the user.
-    static func normalize(_ settings: inout Settings) -> [String] {
+    static func normalize(_ settings: inout FormCore.Settings) -> [String] {
         var notes: [String] = []
 
         func clamp(

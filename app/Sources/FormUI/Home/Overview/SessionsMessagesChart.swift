@@ -94,3 +94,15 @@ struct SessionsMessagesChart: View {
             ])
     }
 }
+
+#Preview("Sessions and messages") {
+    HomePreviewStage(theme: .dark) {
+        ChartCard(
+            title: "Sessions and messages",
+            legend: [ChartLegendItem(.sessions), ChartLegendItem(.messages)],
+            height: HomeMetrics.standard.chart
+        ) {
+            SessionsMessagesChart(daily: HomePreviewData.populated.daily)
+        }
+    }
+}

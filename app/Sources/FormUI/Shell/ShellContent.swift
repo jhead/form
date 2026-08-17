@@ -33,7 +33,7 @@ public struct PendingSurface: View {
             .frame(maxWidth: .infinity)
     }
 
-    static func home() -> PendingSurface {
+    public static func home() -> PendingSurface {
         PendingSurface(
             title: "Home is not wired up yet",
             detail: "The analytics dashboard (W12) plugs in here. The core is live — the "
@@ -41,7 +41,7 @@ public struct PendingSurface: View {
         )
     }
 
-    static func session() -> PendingSurface {
+    public static func session() -> PendingSurface {
         PendingSurface(
             title: "Chat is not wired up yet",
             detail: "The transcript and composer (W10) plug in below this header."

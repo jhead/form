@@ -12,7 +12,7 @@
 pub(in crate::app) mod corpus;
 pub(in crate::app) mod png;
 
-use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, TimeZone};
+use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, TimeZone, Timelike};
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
@@ -78,6 +78,21 @@ const TOOL_RESULTS: &[&str] = &[
     "Finished `dev` profile [unoptimized + debuginfo] in 4.21s",
 ];
 
+const HOUR_MS: i64 = 3_600_000;
+
+/// Days back from the anchor that are guaranteed to carry a session.
+///
+/// Without this the dashboard opens on its emptiest tab: the newest turn lands wherever the
+/// weighted draw happens to put it, the current-streak tile reads zero, and `7d` shows a
+/// single bar. PRD acceptance criterion 3 wants the Home page meaningful on first launch, so
+/// the recent run is reserved rather than left to chance — two sessions today, one yesterday,
+/// then one a day back through the week. Everything else is still drawn.
+///
+/// The run reaches day 7, one further than the streak needs, because an anchor a few minutes
+/// after local midnight leaves no room for a session today: the streak then has to start at
+/// yesterday and still cover seven days.
+const RESERVED_DAYS: [i64; 9] = [0, 0, 1, 2, 3, 4, 5, 6, 7];
+
 /// Sessions that get an image attachment, by index into [`corpus::TOPICS`].
 const SESSIONS_WITH_IMAGES: [usize; 4] = [4, 5, 6, 18];
 /// The one session left in an `error` state, so the sidebar's error dot (F2.4) is real.
@@ -124,10 +139,16 @@ pub fn seed(store: &Store, seed: u64, anchor_ms: i64) -> Result<()> {
         .single()
         .unwrap_or_else(Local::now);
 
+    // Which topics land on the reserved recent days is shuffled, so the sessions at the top
+    // of the sidebar are not simply the first few entries of the corpus every time.
+    let mut day_plan: Vec<Option<i64>> = RESERVED_DAYS.iter().copied().map(Some).collect();
+    day_plan.resize(corpus::TOPICS.len(), None);
+    day_plan.shuffle(&mut rng);
+
     let mut sessions: Vec<PlannedSession> = corpus::TOPICS
         .iter()
         .enumerate()
-        .map(|(i, _)| plan_session(&mut rng, &anchor, anchor_ms, i))
+        .map(|(i, _)| plan_session(&mut rng, &anchor, anchor_ms, i, day_plan[i]))
         .collect();
     // Newest first, which is also the sidebar's default order (F2.1).
     sessions.sort_by_key(|s| std::cmp::Reverse(s.updated_at));
@@ -180,12 +201,12 @@ fn plan_session(
     anchor: &DateTime<Local>,
     anchor_ms: i64,
     topic_idx: usize,
+    assigned_day: Option<i64>,
 ) -> PlannedSession {
     let topic = &corpus::TOPICS[topic_idx];
     let model = pick_model(rng);
     let caching = model.provider_id == "anthropic";
 
-    let start = pick_start(rng, anchor);
     // Length tracks the topic: a shell one-liner is not a twenty-turn session. The scripted
     // prompt count sets the scale, and squaring a uniform draw gives the long tail — most
     // sessions are short, a few are marathons.
@@ -193,8 +214,11 @@ fn plan_session(
     let turn_count =
         ((topic.prompts.len() as f64 * (0.7 + roll * roll * 4.0)).round() as usize).clamp(2, 30);
 
+    // The timeline is built relative to zero and placed afterwards. Planning first means the
+    // session's total span is known when it is placed, so it can be fitted inside the day it
+    // belongs to instead of being slid backwards after the fact.
     let mut turns = Vec::with_capacity(turn_count);
-    let mut cursor = start;
+    let mut cursor = 0i64;
     let mut context = rng.gen_range(1_400..3_200u64);
     let image_slots = if SESSIONS_WITH_IMAGES.contains(&topic_idx) {
         rng.gen_range(1..=2usize)
@@ -207,7 +231,7 @@ fn plan_session(
         // occasionally long when the session picks back up later.
         if t > 0 {
             let gap = if rng.gen_bool(0.12) {
-                rng.gen_range(45..600) * 60_000i64
+                rng.gen_range(40..260) * 60_000i64
             } else {
                 rng.gen_range(25..420) * 1_000i64
             };
@@ -265,17 +289,13 @@ fn plan_session(
         cursor += duration_ms;
     }
 
-    // A long session that started today can run past the anchor once the between-turn gaps
-    // are added up. Sliding the whole session back keeps its internal rhythm and guarantees
-    // nothing in the corpus is dated in the future.
-    let overflow = turns.last().map(|t| t.ended_at).unwrap_or(start) - anchor_ms;
-    if overflow > 0 {
-        for turn in &mut turns {
-            turn.started_at -= overflow;
-            turn.ended_at -= overflow;
-            for tool in &mut turn.tools {
-                tool.started_at -= overflow;
-            }
+    let span = turns.last().map(|t| t.ended_at).unwrap_or(0);
+    let start = pick_start(rng, anchor, anchor_ms, assigned_day, span);
+    for turn in &mut turns {
+        turn.started_at += start;
+        turn.ended_at += start;
+        for tool in &mut turn.tools {
+            tool.started_at += start;
         }
     }
 
@@ -291,27 +311,66 @@ fn plan_session(
     }
 }
 
-/// A start instant with the weekly and daily rhythm baked in, plus a mild recency bias so
-/// the 7-day window is never empty on a fresh install.
-fn pick_start(rng: &mut ChaCha8Rng, anchor: &DateTime<Local>) -> i64 {
+/// Place a session of `span` milliseconds: a start instant with the weekly and daily rhythm
+/// baked in, landing on `assigned_day` when the corpus reserved one for it.
+///
+/// The session is fitted so it *ends* within its day and never after the anchor. A session
+/// longer than the working time left in the day therefore starts the previous evening, which
+/// is both what really happens and what keeps the heatmap from looking blocky.
+fn pick_start(
+    rng: &mut ChaCha8Rng,
+    anchor: &DateTime<Local>,
+    anchor_ms: i64,
+    assigned_day: Option<i64>,
+    span: i64,
+) -> i64 {
     let today = anchor.date_naive();
-    let day_weights: Vec<f64> = (0..SPAN_DAYS)
+    let days_ago = assigned_day.unwrap_or_else(|| weighted_day(rng, today));
+    let date = today - Duration::days(days_ago);
+    let is_today = days_ago == 0;
+
+    // Today's session cannot start after the current hour, so draw from the part of the
+    // diurnal curve that has already happened rather than from the whole day.
+    let hour = pick_hour(rng, is_today.then(|| anchor.hour()));
+    let drawn = local_ms(date, hour, rng.gen_range(0..60), rng.gen_range(0..60));
+
+    let latest_end = if is_today {
+        anchor_ms
+    } else {
+        local_ms(date, 0, 0, 0) + 23 * HOUR_MS
+    };
+    // The second clamp is the invariant, not an optimization: nothing is ever dated ahead of
+    // the anchor, whichever day the draw landed on.
+    drawn.min(latest_end - span).min(anchor_ms - span)
+}
+
+fn weighted_day(rng: &mut ChaCha8Rng, today: NaiveDate) -> i64 {
+    let weights: Vec<f64> = (0..SPAN_DAYS)
         .map(|d| {
             let date = today - Duration::days(d);
             let weekday = date.weekday().num_days_from_monday() as usize;
+            // A mild recency bias so `30d` stays denser than the tail of `all`.
             let recency = 1.0 + 0.9 * (1.0 - d as f64 / SPAN_DAYS as f64);
             WEEKDAY_WEIGHT[weekday] * recency
         })
         .collect();
-    let days_ago = WeightedIndex::new(&day_weights)
+    WeightedIndex::new(&weights)
         .map(|d| d.sample(rng) as i64)
-        .unwrap_or(0);
-    let hour = WeightedIndex::new(HOUR_WEIGHT)
-        .map(|d| d.sample(rng) as u32)
-        .unwrap_or(10);
+        .unwrap_or(0)
+}
 
-    let date = today - Duration::days(days_ago);
-    local_ms(date, hour, rng.gen_range(0..60), rng.gen_range(0..60))
+fn pick_hour(rng: &mut ChaCha8Rng, max_hour: Option<u32>) -> u32 {
+    let weights: Vec<f64> = HOUR_WEIGHT
+        .iter()
+        .enumerate()
+        .map(|(h, w)| match max_hour {
+            Some(max) if h as u32 > max => 0.0,
+            _ => *w,
+        })
+        .collect();
+    WeightedIndex::new(&weights)
+        .map(|d| d.sample(rng) as u32)
+        .unwrap_or(9)
 }
 
 fn local_ms(date: NaiveDate, hour: u32, minute: u32, second: u32) -> i64 {
@@ -765,6 +824,30 @@ mod inspect {
         // Sum the whole data dir: the WAL is not checkpointed and the blobs live beside it.
         let bytes: u64 = walk(&dir);
         println!("data dir: {} KB", bytes / 1024);
+
+        // The Home page's default tab, as the tiles will read it.
+        store
+            .with_conn(|conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT (?1 - started_at) / 86400000 AS d, COUNT(*), SUM(total_tokens)
+                     FROM turns GROUP BY d HAVING d < 10 ORDER BY d",
+                )?;
+                let rows = stmt
+                    .query_map([now_ms()], |r| {
+                        Ok((
+                            r.get::<_, i64>(0)?,
+                            r.get::<_, i64>(1)?,
+                            r.get::<_, i64>(2)?,
+                        ))
+                    })?
+                    .collect::<rusqlite::Result<Vec<_>>>()?;
+                println!("recent days (approx, days-back / turns / tokens):");
+                for (d, n, tok) in rows {
+                    println!("  -{d}: {n:>3} turns {tok:>8} tok");
+                }
+                Ok(())
+            })
+            .unwrap();
         let _ = std::fs::remove_dir_all(&dir);
     }
 

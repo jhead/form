@@ -21,6 +21,7 @@ public struct SidebarSection: Identifiable, Equatable {
 /// session lands at index 0, so ordering by `index` is *also* newest-first (F2.1) while
 /// letting a drag stick (F2.3). See the W9 report.
 public enum SidebarOrder {
+    @MainActor
     public static func sections(in store: SessionStore) -> [SidebarSection] {
         let groups = store.groups.sorted { $0.index < $1.index }
         var sections = groups.map { group in
@@ -30,6 +31,7 @@ public enum SidebarOrder {
         return sections
     }
 
+    @MainActor
     public static func sessions(
         in group: SessionGroup?, store: SessionStore
     ) -> [SessionSummary] {
@@ -45,12 +47,14 @@ public enum SidebarOrder {
 
     /// The rows actually on screen, top to bottom. A collapsed group contributes nothing —
     /// its rows are not there to be numbered, and `⌘3` must land on the third visible row.
+    @MainActor
     public static func visibleSessions(in store: SessionStore) -> [SessionSummary] {
         sections(in: store).flatMap { $0.isCollapsed ? [] : $0.sessions }
     }
 
     /// `⌘1`–`⌘9` (F2.1, spec 14 §2). W14 should resolve rank through this rather than
     /// `SessionStore.session(rank:)`, which uses the other ordering.
+    @MainActor
     public static func session(rank: Int, in store: SessionStore) -> SessionSummary? {
         let visible = visibleSessions(in: store)
         guard rank >= 1, rank <= visible.count else { return nil }
@@ -58,6 +62,7 @@ public enum SidebarOrder {
     }
 
     /// Rank per session id, for the rows that get a number. Only the first nine rows do.
+    @MainActor
     public static func ranks(in store: SessionStore) -> [String: Int] {
         var ranks: [String: Int] = [:]
         for (offset, session) in visibleSessions(in: store).prefix(9).enumerated() {

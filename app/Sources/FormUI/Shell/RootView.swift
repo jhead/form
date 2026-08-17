@@ -68,6 +68,14 @@ public struct RootView<HomeContent: View, SessionContent: View>: View {
             )
         )
         .toastOverlay(toasts)
+        // `⌘,` and the footer menu both raise this flag; W13 owns what it presents.
+        .preferencesSheet(
+            isPresented: Binding(
+                get: { appState.preferencesPresented },
+                set: { appState.preferencesPresented = $0 }),
+            stores: stores,
+            themeController: themeController
+        )
         .environment(appState)
         .environment(stores)
         .onPreferenceChange(SidebarWidthKey.self) { width in
@@ -160,7 +168,7 @@ public struct RootView<HomeContent: View, SessionContent: View>: View {
             .map { AppRoute.session($0.id) } ?? .home
     }
 
-    private func persist(_ mutate: @escaping (inout Settings) -> Void) {
+    private func persist(_ mutate: @escaping (inout FormCore.Settings) -> Void) {
         Task {
             do {
                 try await stores.settings.update(mutate)

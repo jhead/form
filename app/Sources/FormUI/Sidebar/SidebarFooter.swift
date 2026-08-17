@@ -109,25 +109,3 @@ struct SidebarFooter: View {
         }
     }
 }
-
-// MARK: - Theme mode bridging
-
-/// `FormCore.ThemeMode` is an open string (unknown values round-trip); `FormDesign.ThemeMode`
-/// is the closed enum the controller resolves. The shell is the only place the two meet.
-extension FormDesign.ThemeMode {
-    init(_ core: FormCore.ThemeMode) {
-        switch core {
-        case .light: self = .light
-        case .dark: self = .dark
-        default: self = .system
-        }
-    }
-
-    var core: FormCore.ThemeMode {
-        switch self {
-        case .light: .light
-        case .dark: .dark
-        case .system: .system
-        }
-    }
-}

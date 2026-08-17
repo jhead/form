@@ -57,3 +57,15 @@ final class MarkdownRenderCache {
         clock = 0
     }
 }
+
+@MainActor
+func renderedText(
+    _ blocks: [MarkdownBlock], metrics: MarkdownMetrics, sourcePrefix: String, depth: Int,
+    cache: MarkdownRenderCache = .shared
+) -> RenderedText {
+    let key = "\(metrics.cacheKey)|\(sourcePrefix)|\(depth)|"
+        + blocks.map(\.id).joined(separator: ",")
+    return cache.rendered(key: key) {
+        MarkdownAttributedBuilder.render(blocks, metrics: metrics, sourcePrefix: sourcePrefix)
+    }
+}

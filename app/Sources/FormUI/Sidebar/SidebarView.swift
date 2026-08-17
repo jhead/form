@@ -244,6 +244,7 @@ public struct SidebarView: View {
 
 /// `.alert(_:isPresented:presenting:)` wants a `Bool` binding alongside the value; this is
 /// the one-liner that derives it from an optional.
+@MainActor
 private func isPresented<T>(_ binding: Binding<T?>) -> Binding<Bool> {
     Binding(
         get: { binding.wrappedValue != nil },

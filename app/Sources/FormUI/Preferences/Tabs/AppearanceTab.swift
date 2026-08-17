@@ -18,10 +18,10 @@ struct AppearanceTab: View {
                 PreferenceRow(title: "Appearance") {
                     SegmentedToggle(
                         selection: Binding(
-                            get: { controller.settings.appearance.themeMode },
+                            get: { controller.themeMode },
                             set: { controller.setThemeMode($0) }
                         ),
-                        segments: ThemeMode.allCases.map {
+                        segments: FormDesign.ThemeMode.allCases.map {
                             .init(value: $0, title: $0.label, systemImage: $0.systemImage)
                         },
                         height: theme.metrics.controlHeightMedium

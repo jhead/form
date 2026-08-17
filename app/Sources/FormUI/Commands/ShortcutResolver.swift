@@ -80,7 +80,7 @@ public final class ShortcutResolver {
 
     /// Which command owns a candidate equivalent — what the Shortcuts tab asks before it
     /// lets the user record one.
-    public func command(bound to binding: KeyBinding) -> AppCommand? {
+    public func command(boundTo binding: KeyBinding) -> AppCommand? {
         owner[binding].flatMap { id in commands.first { $0.id == id } }
     }
 

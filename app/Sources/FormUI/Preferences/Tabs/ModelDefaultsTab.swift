@@ -2,7 +2,7 @@ import FormCore
 import FormDesign
 import SwiftUI
 
-struct ModelsTab: View {
+struct ModelDefaultsTab: View {
     @Environment(\.theme) private var theme
     let controller: PreferencesController
 

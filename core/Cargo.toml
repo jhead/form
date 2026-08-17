@@ -10,6 +10,11 @@ license = "MIT"
 
 [workspace.dependencies]
 form-core = { path = "crates/form-core" }
+# Dev-only, and deliberately a path dependency on the sibling port: it exists so a test can
+# prove form-core's transcript types still deserialize as pi-core's. See PRD §4.3 — when the
+# swap happens, form-core's wire module is deleted and pi-core is re-exported, and this test
+# is what says that is safe.
+pi-core = { path = "../../pi-rs/crates/pi-core" }
 form-ffi = { path = "crates/form-ffi" }
 
 serde = { version = "1", features = ["derive"] }

@@ -14,17 +14,33 @@ struct MarkdownDocView: View {
     @Environment(\.theme) private var theme
 
     let doc: MarkdownDoc
+    /// Draws the blinking caret after the tail block while the message is still arriving.
+    var showsCaret = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.metrics.spacing.lg) {
             ForEach(doc.blocks, id: \.id) { block in
-                MarkdownView(text: BlockText.of(block))
-                    .typeStyle(theme.typography.body)
-                    .foregroundStyle(theme.color.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
+                if showsCaret, block.id == doc.blocks.last?.id {
+                    // The caret belongs at the end of the text, not at the column's edge, so
+                    // the tail block is the one view that does not claim the full width.
+                    HStack(alignment: .lastTextBaseline, spacing: theme.metrics.spacing.xxs) {
+                        blockView(block)
+                        TypingCaret()
+                        Spacer(minLength: 0)
+                    }
+                } else {
+                    blockView(block)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
+    }
+
+    private func blockView(_ block: MarkdownBlock) -> some View {
+        MarkdownView(text: BlockText.of(block))
+            .typeStyle(theme.typography.body)
+            .foregroundStyle(theme.color.textPrimary)
+            .textSelection(.enabled)
     }
 }
 

@@ -127,3 +127,15 @@ private struct HeadlineTile: View {
         .accessibilityLabel("\(tile.label): \(tile.exact)")
     }
 }
+
+#Preview("Headline tiles") {
+    HomePreviewStage(width: 1_000) {
+        HeadlineTiles(stats: HomePreviewData.populated)
+    }
+}
+
+#Preview("Headline tiles — empty") {
+    HomePreviewStage(theme: .dark, width: 1_000) {
+        HeadlineTiles(stats: HomePreviewData.empty)
+    }
+}

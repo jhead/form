@@ -31,14 +31,8 @@ struct AssistantMessageRow: View {
             }
 
             if !text.isEmpty {
-                HStack(alignment: .bottom, spacing: theme.metrics.spacing.xs) {
-                    if let markdown {
-                        MarkdownDocView(doc: markdown.doc)
-                    }
-                    if isStreaming {
-                        TypingCaret()
-                            .padding(.bottom, theme.metrics.spacing.xs)
-                    }
+                if let markdown {
+                    MarkdownDocView(doc: markdown.doc, showsCaret: isStreaming)
                 }
             } else if isStreaming, thinking.isEmpty {
                 // Between `message_start` and the first delta there is nothing to draw but
@@ -51,13 +45,18 @@ struct AssistantMessageRow: View {
                 }
             }
 
-            MessageActions(
-                timestamp: message.timestamp,
-                isVisible: isHovering && !isStreaming,
-                showsBranch: false,
-                copyText: text,
-                onRetry: onRetry,
-                onBranch: onBranch)
+            // Trailing gutter, per spec 10 §3. Kept in flow rather than overlaid so nothing
+            // the user is reading is covered, and so hovering does not reflow the column.
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                MessageActions(
+                    timestamp: message.timestamp,
+                    isVisible: isHovering && !isStreaming,
+                    showsBranch: false,
+                    copyText: text,
+                    onRetry: onRetry,
+                    onBranch: onBranch)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .onHover { isHovering = $0 }

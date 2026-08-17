@@ -65,7 +65,7 @@ public final class PreferencesController {
     /// toggle feels immediate.
     static let debounce = Duration.milliseconds(300)
 
-    @ObservationIgnored private var draft: Settings?
+    @ObservationIgnored private var draft: FormCore.Settings?
     @ObservationIgnored private var flushTask: Task<Void, Never>?
 
     public init(
@@ -80,7 +80,7 @@ public final class PreferencesController {
 
     // MARK: - Reading
 
-    public var settings: Settings { draft ?? stores.settings.settings }
+    public var settings: FormCore.Settings { draft ?? stores.settings.settings }
 
     public var catalog: CatalogStore { stores.catalog }
 
@@ -90,7 +90,7 @@ public final class PreferencesController {
 
     // MARK: - Writing
 
-    public func edit(_ mutate: (inout Settings) -> Void) {
+    public func edit(_ mutate: (inout FormCore.Settings) -> Void) {
         var next = settings
         mutate(&next)
         guard next != settings else { return }
@@ -100,7 +100,7 @@ public final class PreferencesController {
 
     /// A `Binding` over one field, routed through `edit` so every write is debounced the same
     /// way and every read comes from the current document.
-    public func binding<Value>(_ keyPath: WritableKeyPath<Settings, Value>) -> Binding<Value> {
+    public func binding<Value>(_ keyPath: WritableKeyPath<FormCore.Settings, Value>) -> Binding<Value> {
         Binding(
             get: { self.settings[keyPath: keyPath] },
             set: { value in self.edit { $0[keyPath: keyPath] = value } }
@@ -137,9 +137,15 @@ public final class PreferencesController {
     /// Appearance changes have to repaint before the round trip completes, so they drive
     /// `ThemeController` directly *and* persist. The controller's setters rebuild the resolved
     /// theme; assigning its stored properties would not.
-    public func setThemeMode(_ mode: ThemeMode) {
+    /// `FormDesign.ThemeMode` is the closed enum the controller resolves; the document stores
+    /// the open `FormCore.ThemeMode`. W9's bridge is the only conversion.
+    public func setThemeMode(_ mode: FormDesign.ThemeMode) {
         themeController.setMode(mode)
-        edit { $0.appearance.themeMode = mode }
+        edit { $0.appearance.themeMode = mode.core }
+    }
+
+    public var themeMode: FormDesign.ThemeMode {
+        FormDesign.ThemeMode(settings.appearance.themeMode)
     }
 
     public func setTextScale(_ scale: CGFloat) {
@@ -150,7 +156,7 @@ public final class PreferencesController {
     /// Pulls the resolved theme back in line with the document — after an import, a reset, or
     /// a clamp the core applied to a value we sent.
     public func syncThemeFromSettings() {
-        themeController.setMode(settings.appearance.themeMode)
+        themeController.setMode(themeMode)
         themeController.setTextScale(CGFloat(settings.appearance.textSizeMultiplier))
     }
 
@@ -250,7 +256,7 @@ public final class PreferencesController {
         flushTask?.cancel()
         draft = nil
         do {
-            try await stores.settings.update { $0 = Settings() }
+            try await stores.settings.update { $0 = FormCore.Settings() }
             syncThemeFromSettings()
             transferReport = .reset
         } catch {

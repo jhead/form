@@ -20,13 +20,17 @@ import SwiftUI
 struct MarkdownTextRun: NSViewRepresentable {
     let rendered: RenderedText
     let metrics: MarkdownMetrics
+    /// The joined block ids. Comparing this is how the view decides whether to touch its
+    /// text storage at all — comparing two 60 KB attributed strings on every streaming tick
+    /// would cost more than the render it is trying to avoid.
+    let contentKey: String
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    func makeNSView(context: Context) -> MarkdownNSTextView {
-        // An explicit TextKit 1 stack: `NSLayoutManager` is what lets the inline-code chip be
-        // drawn with an inset and a radius, and what gives an exact height without a scroll
-        // view wrapped around it.
+    /// An explicit TextKit 1 stack: `NSLayoutManager` is what lets the inline-code chip be
+    /// drawn with an inset and a radius, and what gives an exact height without a scroll view
+    /// wrapped around it.
+    static func textKitStack() -> (NSTextStorage, MarkdownLayoutManager, NSTextContainer) {
         let storage = NSTextStorage()
         let layout = MarkdownLayoutManager()
         let container = NSTextContainer(size: .zero)
@@ -34,8 +38,24 @@ struct MarkdownTextRun: NSViewRepresentable {
         container.lineFragmentPadding = 0
         layout.addTextContainer(container)
         storage.addLayoutManager(layout)
+        return (storage, layout, container)
+    }
 
+    /// The height a run needs at `width`. Never wider than what it was offered — the
+    /// transcript column must not scroll horizontally (spec 11 §5), so a long unbreakable
+    /// token wraps rather than widening the view.
+    static func measure(layout: NSLayoutManager, container: NSTextContainer, width: CGFloat)
+        -> CGSize
+    {
+        container.size = CGSize(width: width, height: .greatestFiniteMagnitude)
+        layout.ensureLayout(for: container)
+        return CGSize(width: width, height: ceil(layout.usedRect(for: container).height))
+    }
+
+    func makeNSView(context: Context) -> MarkdownNSTextView {
+        let (storage, _, container) = Self.textKitStack()
         let view = MarkdownNSTextView(frame: .zero, textContainer: container)
+        view.retainedStorage = storage
         view.isEditable = false
         view.drawsBackground = false
         view.textContainerInset = .zero
@@ -59,9 +79,7 @@ struct MarkdownTextRun: NSViewRepresentable {
         guard let container = nsView.textContainer, let layout = nsView.layoutManager else {
             return nil
         }
-        container.size = CGSize(width: width, height: .greatestFiniteMagnitude)
-        layout.ensureLayout(for: container)
-        return CGSize(width: width, height: ceil(layout.usedRect(for: container).height))
+        return Self.measure(layout: layout, container: container, width: width)
     }
 
     private func apply(to view: MarkdownNSTextView) {
@@ -76,8 +94,9 @@ struct MarkdownTextRun: NSViewRepresentable {
         }
         // Identical content arrives on every streaming tick for every run but the last;
         // replacing the storage would drop the user's selection, so compare first.
-        if view.rendered?.attributed != rendered.attributed {
+        if view.contentKey != contentKey {
             view.textStorage?.setAttributedString(rendered.attributed)
+            view.contentKey = contentKey
         }
         view.rendered = rendered
     }
@@ -97,6 +116,10 @@ struct MarkdownTextRun: NSViewRepresentable {
 /// the URL (spec 11 §2).
 final class MarkdownNSTextView: NSTextView {
     var rendered: RenderedText?
+    var contentKey: String?
+    /// A text container's back-reference to its layout manager does not own it, so the
+    /// bottom of the TextKit 1 stack has to be held from the top or it deallocates under us.
+    var retainedStorage: NSTextStorage?
 
     private var underlined: NSRange?
 
@@ -136,7 +159,7 @@ final class MarkdownNSTextView: NSTextView {
         addTrackingArea(
             NSTrackingArea(
                 rect: .zero,
-                options: [.activeInKeyWindow, .inVisibleRect, .mouseMoved, .mouseExitedAndEntered],
+                options: [.activeInKeyWindow, .inVisibleRect, .mouseMoved, .mouseEnteredAndExited],
                 owner: self))
     }
 

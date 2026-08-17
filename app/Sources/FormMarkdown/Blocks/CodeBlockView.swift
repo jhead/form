@@ -42,6 +42,10 @@ struct CodeBlockView: View {
         }
     }
 
+    /// Suppressed while the fence is still being written (spec 11 §4): copying half a code
+    /// block is never what the user meant.
+    var showsCopyButton: Bool { metrics.style.showsCopyButton && !partial }
+
     private var header: some View {
         HStack(spacing: metrics.theme.metrics.spacing.md) {
             if let language, !language.isEmpty {
@@ -50,9 +54,7 @@ struct CodeBlockView: View {
                     .foregroundStyle(metrics.theme.color.textTertiary)
             }
             Spacer(minLength: 0)
-            // Suppressed while the fence is still being written (spec 11 §4): copying half a
-            // code block is never what the user meant.
-            if metrics.style.showsCopyButton, !partial, isHovering || didCopy {
+            if showsCopyButton, isHovering || didCopy {
                 IconButton(
                     systemImage: didCopy ? "checkmark" : "doc.on.doc",
                     accessibilityLabel: didCopy ? "Copied" : "Copy code",

@@ -126,10 +126,6 @@ struct QueuedMessageRow: View {
             }
             .padding(.vertical, theme.metrics.spacing.lg)
             .padding(.horizontal, 14)
-            .frame(
-                maxWidth: max(0, columnWidth) * theme.metrics.messageMaxWidthFraction,
-                alignment: .leading
-            )
             .background(
                 RoundedRectangle(cornerRadius: theme.metrics.radius.xl, style: .continuous)
                     .fill(theme.color.surfaceRaised.opacity(0.6))
@@ -142,6 +138,9 @@ struct QueuedMessageRow: View {
                             lineWidth: theme.metrics.hairline * 2,
                             dash: [theme.metrics.spacing.xs, theme.metrics.spacing.xs]))
             )
+            .frame(
+                maxWidth: max(0, columnWidth) * theme.metrics.messageMaxWidthFraction,
+                alignment: .trailing)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Queued: \(text)")

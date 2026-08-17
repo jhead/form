@@ -20,8 +20,6 @@ struct MarkdownSourceMap {
     /// Roots, in rendered order.
     let nodes: [SourceNode]
 
-    static let empty = MarkdownSourceMap(source: "", nodes: [])
-
     /// The markdown for a rendered selection.
     ///
     /// Two rules, both of which fall out of "give the user something they could paste":
@@ -98,8 +96,6 @@ indirect enum SourceNode {
 struct RenderedText {
     let attributed: NSAttributedString
     let map: MarkdownSourceMap
-
-    static let empty = RenderedText(attributed: NSAttributedString(), map: .empty)
 
     var isEmpty: Bool { attributed.length == 0 }
 

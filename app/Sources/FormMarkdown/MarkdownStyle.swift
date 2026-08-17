@@ -42,7 +42,7 @@ public struct MarkdownStyle: Sendable, Equatable {
         self.init(
             showLineNumbers: editor?.showLineNumbers ?? false,
             wrapCode: editor?.wrapCode ?? false,
-            codeFontSize: editor?.fontSize.map(CGFloat.init),
+            codeFontSize: editor?.fontSize.map { CGFloat($0) },
             showsCopyButton: showsCopyButton,
             isSelectable: isSelectable
         )

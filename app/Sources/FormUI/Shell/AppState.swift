@@ -99,6 +99,15 @@ public final class AppState {
     public func toggleSidebar() { sidebarCollapsed.toggle() }
 }
 
+/// The narrow face W14's command table depends on (spec 14 §1). `AppState` is the app's
+/// implementation; `PreviewAppState` is the one W14 tests against.
+extension AppState: CommandAppState {
+    public var currentSessionId: String? { route.sessionId }
+    public var isShowingHome: Bool { route.isHome }
+    public func showHome() { navigate(to: .home) }
+    public func showSession(_ sessionId: String) { navigate(to: .session(sessionId)) }
+}
+
 /// The two segments of the sidebar's top control.
 public enum SidebarSegment: String, Hashable, Sendable, CaseIterable {
     case home, code

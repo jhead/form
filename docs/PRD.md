@@ -128,6 +128,13 @@ to `pi-core`'s**, including `#[serde(rename_all = "camelCase")]` and the `snake_
 tags (`text_delta`, `toolcall_end`, …). `form-core` defines them today; when `pi-rs` is
 ready, `form-core` deletes its copies and re-exports `pi_core`'s. Any divergence is a bug.
 
+**This is verified, not assumed.** `pi-rs` has completed its port, and
+`core/crates/form-core/tests/pi_compat.rs` serializes every transcript type and every
+streaming-event variant form produces, reads it back as the `pi-core` type, and fails on any
+dropped or altered field — plus the reverse direction, since sessions the real harness writes
+must stay readable here. `pi-core` is a dev-dependency only; nothing shipping links it. The
+swap plan is [`16-pi-integration.md`](./specs/16-pi-integration.md).
+
 Types that are **form's own** and have no `pi` equivalent — `Session`, `SessionGroup`,
 `Workspace`, `Settings`, `UsageStats`, `MarkdownBlock` — live in `form-core::app` and are
 free to evolve.
@@ -410,5 +417,6 @@ The MVP is done when, on a clean machine:
 | Rust callbacks into Swift from a non-main thread cause data races | One dispatcher thread in Rust; Swift bridges to `AsyncStream` and hops to `@MainActor` at a single point (W7 owns it). |
 | Parallel workstreams diverge on the protocol | Protocol types are written once in W0, in both languages, and frozen. A round-trip test in W6 fails if they drift. |
 | Streaming markdown re-parse costs frames | Parse is debounced and incremental; only the tail block re-renders. Budget: 16 ms at 120 blocks. |
-| `pi-rs` lands with a different shape than assumed | Transcript types are copied verbatim from `pi-core` today; the swap is a re-export, and the compatibility test is the guard. |
+| `pi-rs` lands with a different shape than assumed | **Retired.** `pi-rs` is ported and `tests/pi_compat.rs` proves the wire formats agree in both directions. |
+| Real tool execution makes in-process risky | The `CoreTransport` seam keeps the sidecar option open; spec 16 §3 says to revisit the §4.1 decision when `pi-tools` runs real commands, rather than inheriting it. |
 | Xcode project drift across agents | No `.xcodeproj` in source control — SwiftPM is the build, `xcodegen` generates a project on demand. |

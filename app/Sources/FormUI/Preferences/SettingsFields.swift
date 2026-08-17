@@ -13,7 +13,7 @@ import Foundation
 /// The `editor` and `advanced` sections are optional in Swift and every field inside them is
 /// optional; these accessors read through to the Rust defaults and materialize the section
 /// only when something is actually set.
-extension Settings {
+extension FormCore.Settings {
     // MARK: General
 
     var telemetry: Bool {

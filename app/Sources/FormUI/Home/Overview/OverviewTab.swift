@@ -69,3 +69,21 @@ struct OverviewTab: View {
     private var hasTokens: Bool { stats.daily.contains { $0.totalTokens > 0 } }
     private var hasSessions: Bool { stats.daily.contains { $0.sessions > 0 || $0.messages > 0 } }
 }
+
+#Preview("Overview") {
+    HomePreviewStage(width: 1_080) {
+        OverviewTab(stats: HomePreviewData.populated)
+    }
+}
+
+#Preview("Overview — empty") {
+    HomePreviewStage(theme: .dark, width: 1_080) {
+        OverviewTab(stats: HomePreviewData.empty)
+    }
+}
+
+#Preview("Overview — sparse") {
+    HomePreviewStage(width: 1_080) {
+        OverviewTab(stats: HomePreviewData.sparse)
+    }
+}

@@ -7,7 +7,7 @@ struct EditorTab: View {
     @Environment(\.theme) private var theme
     let controller: PreferencesController
 
-    private var settings: Settings { controller.settings }
+    private var settings: FormCore.Settings { controller.settings }
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.metrics.spacing.xxl) {

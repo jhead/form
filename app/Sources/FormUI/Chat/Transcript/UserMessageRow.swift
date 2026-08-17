@@ -58,9 +58,11 @@ struct UserMessageRow: View {
             RoundedRectangle(cornerRadius: theme.metrics.radius.xl, style: .continuous)
                 .fill(theme.color.surfaceRaised)
         )
+        // The fill hugs the text; this box only caps the width and pushes it to the column's
+        // trailing edge (F1.2).
         .frame(
             maxWidth: max(0, columnWidth) * theme.metrics.messageMaxWidthFraction,
-            alignment: .leading)
+            alignment: .trailing)
     }
 }
 

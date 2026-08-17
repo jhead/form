@@ -119,7 +119,7 @@ public struct PreferencesSheet: View {
         switch controller.tab {
         case .general: GeneralTab(controller: controller)
         case .providers: ProvidersTab(controller: controller)
-        case .models: ModelsTab(controller: controller)
+        case .models: ModelDefaultsTab(controller: controller)
         case .appearance: AppearanceTab(controller: controller)
         case .editor: EditorTab(controller: controller)
         case .shortcuts: ShortcutsTab(controller: controller)

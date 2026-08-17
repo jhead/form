@@ -48,16 +48,35 @@ final class TranscriptScrollState {
     /// owns yet.
     private var remembered: [String: Bool] = [:]
     private var sessionId: String?
+    /// False until the first real layout. Before that there is no scroll position to
+    /// interpret, and treating the empty one as "scrolled away" shows the pill on load.
+    private var hasSettled = false
+
+    /// Float jitter in the measured offset, in points.
+    private static let epsilon: CGFloat = 0.5
 
     func update(_ next: TranscriptMetrics) {
-        let wasAtBottom = metrics.isAtBottom
+        let previous = metrics
         metrics = next
-        // Reaching the bottom re-arms the follow; leaving it disarms.
-        if next.isAtBottom {
-            isPinned = true
-        } else if wasAtBottom, next.overflows {
-            isPinned = false
+
+        // Before the first real layout there is no scroll position to interpret; reading the
+        // empty one as "scrolled away" is what shows the pill on load.
+        guard hasSettled else {
+            guard next.contentHeight > 0, next.viewportHeight > 0 else { return }
+            hasSettled = true
+            if isPinned { scrollRequest += 1 }
+            return
         }
+
+        // **Only the user scrolling up breaks the follow.** Content growing under the
+        // viewport and our own scroll-to-bottom both move the offset *forward*; a backward
+        // move is a scroll wheel or a drag, and nothing else. Keying on "is at the bottom"
+        // instead would unpin on every delta, because the tail is briefly below the fold
+        // between the layout pass and the scroll that chases it.
+        if next.offset < previous.offset - Self.epsilon { isPinned = false }
+        if next.isAtBottom { isPinned = true }
+        if isPinned, next.contentHeight != previous.contentHeight { scrollRequest += 1 }
+
         if let sessionId { remembered[sessionId] = isPinned }
     }
 
@@ -73,10 +92,11 @@ final class TranscriptScrollState {
     }
 
     func route(to sessionId: String?) {
+        guard sessionId != self.sessionId || !hasSettled else { return }
         self.sessionId = sessionId
         isPinned = sessionId.flatMap { remembered[$0] } ?? true
         metrics = TranscriptMetrics()
-        if isPinned { scrollRequest += 1 }
+        hasSettled = false
     }
 }
 

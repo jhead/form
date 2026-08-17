@@ -187,3 +187,19 @@ struct HeatmapColumn: Identifiable {
         (Calendar.current.component(.weekday, from: date) + 5) % 7
     }
 }
+
+#Preview("Activity heatmap") {
+    HomePreviewStage {
+        FormCard(title: "Activity", subtitle: "Tokens per day") {
+            ActivityHeatmap(cells: HomePreviewData.allTime.heatmap)
+        }
+    }
+}
+
+#Preview("Activity heatmap — dark") {
+    HomePreviewStage(theme: .dark) {
+        FormCard(title: "Activity", subtitle: "Tokens per day") {
+            ActivityHeatmap(cells: HomePreviewData.allTime.heatmap)
+        }
+    }
+}

@@ -115,6 +115,21 @@ public final class CommandCenter {
 
     // MARK: - Key handling
 
+    /// First refusal on a key event, for a presented overlay. Most recently registered wins,
+    /// so the palette's `⌘⏎` beats the table's `⌘↩ Send` while the palette is up.
+    public typealias KeyInterceptor = @MainActor (NSEvent) -> Bool
+
+    @ObservationIgnored private var interceptors: [(id: String, handle: KeyInterceptor)] = []
+
+    public func registerKeyInterceptor(id: String, handle: @escaping KeyInterceptor) {
+        interceptors.removeAll { $0.id == id }
+        interceptors.append((id, handle))
+    }
+
+    public func unregisterKeyInterceptor(id: String) {
+        interceptors.removeAll { $0.id == id }
+    }
+
     /// The global key handler (spec 14 §1). Returns `true` when the event was consumed.
     ///
     /// This runs ahead of menu key-equivalent dispatch, which is what lets `Esc` and
@@ -122,6 +137,10 @@ public final class CommandCenter {
     /// item never fires for the same keystroke — the action runs exactly once either way.
     @discardableResult
     public func handle(event: NSEvent) -> Bool {
+        guard event.type == .keyDown else { return false }
+        for interceptor in interceptors.reversed() where interceptor.handle(event) {
+            return true
+        }
         guard let command = resolver.command(for: event) else { return false }
         guard command.isEnabled(context) else {
             // A disabled command still swallows its key: letting `⌘G` fall through to a

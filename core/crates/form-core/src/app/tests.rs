@@ -61,7 +61,9 @@ fn indexes(store: &Store, group: Option<&str>) -> Vec<(String, u32)> {
 #[test]
 fn opens_empty_and_survives_a_reopen() {
     let t = TempStore::new();
-    assert_eq!(t.store.schema_version().unwrap(), 1);
+    // Bump alongside a new migration — an accidental change here means a database in the
+    // wild is being upgraded by something that was meant to be additive.
+    assert_eq!(t.store.schema_version().unwrap(), 2);
     assert!(t.store.is_empty().unwrap());
     assert!(t.store.list_sessions(true).unwrap().sessions.is_empty());
 
@@ -987,6 +989,94 @@ fn seeded_turns_span_the_window_with_several_models_and_all_three_outcomes() {
         t.store.count_tool_invocations().unwrap() > 100,
         "a handful of tool calls per turn"
     );
+}
+
+/// Local day index of every turn, relative to the anchor's day: 0 is today, 1 yesterday.
+fn active_days_back(t: &TempStore, anchor: i64) -> std::collections::BTreeSet<i64> {
+    use chrono::{Local, TimeZone};
+    let today = Local.timestamp_millis_opt(anchor).unwrap().date_naive();
+    t.store
+        .with_conn(|conn| {
+            let mut stmt = conn.prepare("SELECT started_at FROM turns")?;
+            let rows = stmt
+                .query_map([], |r| r.get(0))?
+                .collect::<rusqlite::Result<Vec<i64>>>()?;
+            Ok(rows)
+        })
+        .unwrap()
+        .into_iter()
+        .map(|ms| {
+            let date = Local.timestamp_millis_opt(ms).unwrap().date_naive();
+            (today - date).num_days()
+        })
+        .collect()
+}
+
+/// PRD acceptance criterion 3: the dashboard must be meaningful on first launch. That means
+/// the `7d` tab — the default — has to be populated and the current-streak tile has to read
+/// something other than zero, which needs an unbroken run of local days ending today.
+#[test]
+fn the_corpus_runs_up_to_today_with_an_unbroken_recent_streak() {
+    let t = seeded();
+    let days = active_days_back(&t, ANCHOR);
+
+    assert!(days.contains(&0), "no activity today: {days:?}");
+    assert!(days.contains(&1), "no activity yesterday: {days:?}");
+    for day in 0..7 {
+        assert!(days.contains(&day), "day -{day} is a hole in the streak");
+    }
+    // The 7d window should read as a week of work, not one bar.
+    assert!(days.iter().filter(|d| **d < 7).count() >= 7);
+}
+
+#[test]
+fn no_seeded_turn_is_dated_after_the_anchor() {
+    let t = seeded();
+    let latest: i64 = t
+        .store
+        .with_conn(|conn| {
+            Ok(conn.query_row(
+                "SELECT MAX(x) FROM (SELECT MAX(ended_at) AS x FROM turns
+                                     UNION ALL SELECT MAX(timestamp) FROM entries)",
+                [],
+                |r| r.get(0),
+            )?)
+        })
+        .unwrap();
+    assert!(
+        latest <= ANCHOR,
+        "corpus runs {}ms past the anchor",
+        latest - ANCHOR
+    );
+    // ...and it really does reach today, rather than clearing the bar by stopping early.
+    assert!(ANCHOR - latest < 4 * 3_600_000, "newest turn is stale");
+}
+
+/// The same guarantee, restated as the rule the stats engine actually applies, and checked
+/// at every hour of the day. Local midnight is the awkward one: no time has elapsed today, so
+/// there is genuinely no room for a session — the streak has to run from yesterday instead,
+/// which is exactly what `stats::calc::streaks` allows.
+#[test]
+fn the_recency_guarantee_holds_whatever_the_anchor_falls_on() {
+    for offset_hours in 0..24 {
+        let anchor = ANCHOR - (ANCHOR % 86_400_000) + offset_hours * 3_600_000;
+        let t = TempStore::new();
+        seed::seed(&t.store, seed::DEFAULT_SEED, anchor).unwrap();
+        let days = active_days_back(&t, anchor);
+
+        let newest = *days.iter().next().expect("the corpus is never empty");
+        assert!(
+            newest <= 1,
+            "anchor +{offset_hours}h: newest activity is {newest} days back, \
+             which reads as a broken streak"
+        );
+        for day in newest..newest + 7 {
+            assert!(
+                days.contains(&day),
+                "anchor +{offset_hours}h: day -{day} is a hole in {days:?}"
+            );
+        }
+    }
 }
 
 #[test]

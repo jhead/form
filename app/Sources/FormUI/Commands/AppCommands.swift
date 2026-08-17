@@ -195,8 +195,12 @@ public enum AppCommands {
             keywords: ["dark", "light", "theme", "mode"]
         ) { context in
             // The controller repaints now; the settings write is what survives a relaunch.
+            // `FormDesign.ThemeMode` (a closed enum) and `FormCore.ThemeMode` (an open
+            // protocol value) are separate types on purpose — the wire format has to tolerate
+            // a mode this build does not know. They meet here, on their raw value.
             context.theme.toggleAppearance()
-            try? await context.stores.settings.setThemeMode(context.theme.mode)
+            try? await context.stores.settings.setThemeMode(
+                FormCore.ThemeMode(context.theme.mode.rawValue))
         },
 
         AppCommand(
@@ -361,6 +365,7 @@ public enum AppCommands {
 
     /// `⌘+` / `⌘-` walk `ThemeController.textScaleLadder` so the ends land exactly on the
     /// clamp values and the preferences slider snaps to the same stops (spec 08).
+    @MainActor
     private static func stepTextSize(_ context: CommandContext, by direction: Int) async {
         let ladder = ThemeController.textScaleLadder
         let current = CGFloat(context.stores.settings.settings.appearance.textSizeMultiplier)
@@ -371,6 +376,7 @@ public enum AppCommands {
         await setTextSize(context, to: next)
     }
 
+    @MainActor
     private static func setTextSize(_ context: CommandContext, to value: CGFloat) async {
         context.theme.setTextScale(value)
         try? await context.stores.settings.setTextSizeMultiplier(Double(context.theme.textScale))

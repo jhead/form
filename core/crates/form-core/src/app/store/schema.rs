@@ -10,7 +10,7 @@ use crate::error::Result;
 
 type Migration = fn(&Connection) -> Result<()>;
 
-const MIGRATIONS: &[Migration] = &[v1];
+const MIGRATIONS: &[Migration] = &[v1, v2];
 
 pub fn migrate(conn: &Connection) -> Result<()> {
     conn.execute_batch(
@@ -155,9 +155,72 @@ CREATE VIRTUAL TABLE search USING fts5(
     Ok(())
 }
 
+/// v2 — index the per-day message aggregate.
+///
+/// The dashboard's "messages per day" is the one `GROUP BY` with nothing behind it, so
+/// SQLite scanned `entries` and touched every row's `payload` blob to reach `timestamp`.
+/// Leading on `kind` lets the `kind = 'message'` filter seek, and carrying `timestamp` makes
+/// the range an index-only scan whose cost tracks row count rather than transcript size.
+fn v2(conn: &Connection) -> Result<()> {
+    conn.execute_batch("CREATE INDEX entries_kind_timestamp ON entries(kind, timestamp);")?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The upgrade path is the one migrations exist for: a database created before v2 must
+    /// end up identical to one created fresh.
+    #[test]
+    fn an_existing_v1_database_gains_the_v2_index() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
+        )
+        .unwrap();
+        v1(&conn).unwrap();
+        set_schema_version(&conn, 1).unwrap();
+        assert!(!has_index(&conn, "entries_kind_timestamp"));
+
+        migrate(&conn).unwrap();
+        assert_eq!(schema_version(&conn).unwrap(), MIGRATIONS.len() as u32);
+        assert!(has_index(&conn, "entries_kind_timestamp"));
+    }
+
+    /// The point of the index: the per-day message count must not have to read `payload`.
+    #[test]
+    fn the_daily_message_aggregate_is_index_only() {
+        let conn = Connection::open_in_memory().unwrap();
+        migrate(&conn).unwrap();
+        let plan: String = conn
+            .query_row(
+                "EXPLAIN QUERY PLAN
+                 SELECT timestamp / 86400000, COUNT(*) FROM entries
+                 WHERE kind = 'message' AND timestamp >= 0 GROUP BY 1",
+                [],
+                |r| r.get(3),
+            )
+            .unwrap();
+        assert!(
+            plan.contains("entries_kind_timestamp"),
+            "expected the new index in the plan, got: {plan}"
+        );
+        assert!(
+            plan.contains("COVERING INDEX"),
+            "expected an index-only scan, got: {plan}"
+        );
+    }
+
+    fn has_index(conn: &Connection, name: &str) -> bool {
+        conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = ?1",
+            [name],
+            |r| r.get::<_, i64>(0),
+        )
+        .unwrap()
+            > 0
+    }
 
     #[test]
     fn migrates_from_empty_and_is_idempotent() {

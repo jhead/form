@@ -58,3 +58,15 @@ struct TokensOverTimeChart: View {
         return ChartReadout(title: StatsFormat.longDate(point.date), rows: rows)
     }
 }
+
+#Preview("Tokens over time") {
+    HomePreviewStage {
+        ChartCard(
+            title: "Tokens over time",
+            legend: ChartSeries.tokenSeries.map { ChartLegendItem($0) },
+            height: HomeMetrics.standard.chart
+        ) {
+            TokensOverTimeChart(daily: HomePreviewData.populated.daily)
+        }
+    }
+}
