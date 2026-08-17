@@ -11,7 +11,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use pi_agent::types::AgentEvent;
-use pi_auth::{ApiKeyCredential, Credential, InMemoryCredentialStore};
 use pi_core::{AbortSignal as PiAbortSignal, Api, Model as PiModel, ModelCost, ModelCostRates};
 use pi_sdk::Pi;
 
@@ -35,14 +34,11 @@ impl PiHarness {
     /// the user can actually call is a model the app can actually select. A failed refresh
     /// is not fatal — the snapshot still resolves hundreds of models.
     pub async fn new(system_prompt: String) -> Result<Self, String> {
-        // The SDK's default store is empty and never consults the environment, so a key in
-        // `.env` would resolve to "No API key for provider". Seed the store from the env
-        // instead, using pi's own per-provider variable names.
+        // The SDK's default store is empty and never consults the environment or the
+        // Keychain, so a key in either place resolved to "No API key for provider".
         let pi = Pi::builder()
             .with_builtin_providers()
-            .with_credentials(Arc::new(InMemoryCredentialStore::with_credentials(
-                credentials_from_env(),
-            )))
+            .with_credentials(Arc::new(crate::credentials::LiveCredentialStore))
             .build()
             .map_err(|e| format!("pi sdk: {}", e.message()))?;
         let pi = Arc::new(pi);
@@ -160,30 +156,6 @@ fn pretty_provider(id: &str) -> String {
             .collect::<Vec<_>>()
             .join(" "),
     }
-}
-
-/// Every provider whose API-key variable is present in the environment.
-fn credentials_from_env() -> Vec<(String, Credential)> {
-    const PROVIDERS: &[&str] = &[
-        "openrouter",
-        "anthropic",
-        "openai",
-        "google",
-        "groq",
-        "mistral",
-        "deepseek",
-        "xai",
-    ];
-    PROVIDERS
-        .iter()
-        .filter_map(|provider| {
-            let key = pi_auth::get_env_api_key(provider, None)?;
-            Some((
-                provider.to_string(),
-                Credential::ApiKey(ApiKeyCredential::new(key)),
-            ))
-        })
-        .collect()
 }
 
 /// Fetch the provider's current model list and register it.
