@@ -18,7 +18,7 @@ CORE_LIB_DIR := $(abspath $(CORE_DIR)/target/$(PROFILE))
 LINK_FLAGS   := -Xlinker -L$(CORE_LIB_DIR)
 
 .PHONY: all debug release core app bundle run test test-rust test-swift lint fmt \
-        headers check-symbols cli clean xcode verify-xcode form.xcodeproj
+        headers check-symbols cli clean xcode verify-xcode verify-live form.xcodeproj
 
 all: bundle
 
@@ -43,6 +43,15 @@ bundle: app
 
 run: bundle
 	@open $(APP_BUNDLE)
+
+## Prove the live path: real requests to the configured provider, both halves of the stack.
+## Needs a key in .env or the Keychain, and a network. Excluded from `make test` on purpose,
+## so a clean checkout with no credentials still goes green.
+verify-live: core
+	@echo "==> rust: harness against the live provider"
+	@cd $(CORE_DIR) && cargo test -p form-core --test openrouter_live -- --ignored --nocapture
+	@echo "==> swift: stores against the live provider"
+	@cd $(APP_DIR) && FORM_LIVE=1 swift test $(LINK_FLAGS) --filter LiveProvider
 
 ## The end-to-end proof with no Swift involved: streams a stub run to the terminal.
 cli: core
