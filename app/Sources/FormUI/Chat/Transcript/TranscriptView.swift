@@ -40,7 +40,7 @@ struct TranscriptView: View {
                             row(item, columnWidth: columnWidth)
                                 .id(item.id)
                         }
-                        Color.clear
+                        theme.color.background.opacity(0)
                             .frame(height: theme.metrics.spacing.xs)
                             .id(Self.bottomAnchor)
                     }
@@ -84,7 +84,7 @@ struct TranscriptView: View {
 
     private func metricsProbe(viewport: CGFloat) -> some View {
         GeometryReader { geometry in
-            Color.clear.preference(
+            theme.color.background.opacity(0).preference(
                 key: TranscriptMetricsKey.self,
                 value: TranscriptMetrics(
                     contentHeight: geometry.size.height,

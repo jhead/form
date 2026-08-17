@@ -171,3 +171,21 @@ struct CostTab: View {
         }
     }
 }
+
+#Preview("Cost") {
+    HomePreviewStage(width: 1_080) {
+        CostTab(stats: HomePreviewData.allTime)
+    }
+}
+
+#Preview("Cost — empty") {
+    HomePreviewStage(theme: .dark, width: 1_080) {
+        CostTab(stats: HomePreviewData.empty)
+    }
+}
+
+#Preview("Cost — sparse") {
+    HomePreviewStage(width: 1_080) {
+        CostTab(stats: HomePreviewData.sparse)
+    }
+}

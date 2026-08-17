@@ -163,3 +163,19 @@ enum ModelColumn: String, CaseIterable, Identifiable {
         }
     }
 }
+
+#Preview("Per-model table") {
+    HomePreviewStage(width: 1_000) {
+        ChartCard(title: "Per model", subtitle: "Click a column to sort") {
+            ModelTable(models: HomePreviewData.populated.models)
+        }
+    }
+}
+
+#Preview("Per-model table — dark") {
+    HomePreviewStage(theme: .dark, width: 1_000) {
+        ChartCard(title: "Per model", subtitle: "Click a column to sort") {
+            ModelTable(models: HomePreviewData.populated.models)
+        }
+    }
+}

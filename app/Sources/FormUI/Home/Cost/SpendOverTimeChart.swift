@@ -158,3 +158,30 @@ struct CacheOverTimeChart: View {
             ])
     }
 }
+
+#Preview("Spend over time") {
+    HomePreviewStage {
+        ChartCard(
+            title: "Spend over time",
+            legend: [
+                ChartLegendItem("Daily", colorIndex: ChartSeries.cost.rawValue),
+                ChartLegendItem("Cumulative", colorIndex: ChartSeries.output.rawValue),
+            ],
+            height: HomeMetrics.standard.chart
+        ) {
+            SpendOverTimeChart(byDay: HomePreviewData.populated.cost.byDay)
+        }
+    }
+}
+
+#Preview("Cache effectiveness") {
+    HomePreviewStage(theme: .dark) {
+        ChartCard(
+            title: "Cache effectiveness",
+            legend: [ChartLegendItem(.cacheRead), ChartLegendItem(.cacheWrite)],
+            height: HomeMetrics.standard.chart
+        ) {
+            CacheOverTimeChart(daily: HomePreviewData.populated.cache.daily)
+        }
+    }
+}

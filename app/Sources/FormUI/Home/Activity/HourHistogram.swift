@@ -144,3 +144,21 @@ struct WeekdayHourMatrix: View {
         return "\(weekday) \(hour) · \(StatsFormat.grouped(cell.tokens)) tokens"
     }
 }
+
+#Preview("Hour of day") {
+    HomePreviewStage {
+        ChartCard(title: "Hour of day", height: HomeMetrics.standard.chartCompact) {
+            HourHistogram(
+                hourly: HomePreviewData.populated.hourly,
+                peakHour: HomePreviewData.populated.headline.peakHour)
+        }
+    }
+}
+
+#Preview("Weekday × hour") {
+    HomePreviewStage(theme: .dark) {
+        ChartCard(title: "Weekday × hour") {
+            WeekdayHourMatrix(weekdayHour: HomePreviewData.populated.weekdayHour)
+        }
+    }
+}

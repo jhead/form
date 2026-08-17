@@ -46,3 +46,15 @@ struct DashboardSkeleton: View {
         }
     }
 }
+
+#Preview("Skeleton") {
+    HomePreviewStage(width: 1_000) {
+        DashboardSkeleton()
+    }
+}
+
+#Preview("Skeleton — dark") {
+    HomePreviewStage(theme: .dark, width: 1_000) {
+        DashboardSkeleton()
+    }
+}

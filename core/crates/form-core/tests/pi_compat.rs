@@ -27,8 +27,9 @@ where
 {
     let from_form = serde_json::to_value(value).expect("form value serializes");
 
-    let as_pi: P = serde_json::from_value(from_form.clone())
-        .unwrap_or_else(|e| panic!("{label}: pi-core cannot read form's payload: {e}\n{from_form:#}"));
+    let as_pi: P = serde_json::from_value(from_form.clone()).unwrap_or_else(|e| {
+        panic!("{label}: pi-core cannot read form's payload: {e}\n{from_form:#}")
+    });
 
     let round_tripped = serde_json::to_value(&as_pi).expect("pi value serializes");
     assert_subset(label, &from_form, &round_tripped, "");
@@ -39,13 +40,19 @@ fn assert_subset(label: &str, expected: &Value, actual: &Value, path: &str) {
         (Value::Object(want), Value::Object(got)) => {
             for (key, want_value) in want {
                 let got_value = got.get(key).unwrap_or_else(|| {
-                    panic!("{label}: pi-core dropped `{path}{key}` — the field was renamed or removed")
+                    panic!(
+                        "{label}: pi-core dropped `{path}{key}` — the field was renamed or removed"
+                    )
                 });
                 assert_subset(label, want_value, got_value, &format!("{path}{key}."));
             }
         }
         (Value::Array(want), Value::Array(got)) => {
-            assert_eq!(want.len(), got.len(), "{label}: array length changed at `{path}`");
+            assert_eq!(
+                want.len(),
+                got.len(),
+                "{label}: array length changed at `{path}`"
+            );
             for (i, (w, g)) in want.iter().zip(got).enumerate() {
                 assert_subset(label, w, g, &format!("{path}[{i}]."));
             }
@@ -155,8 +162,13 @@ fn every_streaming_event_variant_is_wire_identical() {
     let tool_call = fw::ToolCall::new("toolu_01", "read");
 
     let events = vec![
-        fw::AssistantMessageEvent::Start { partial: partial.clone() },
-        fw::AssistantMessageEvent::TextStart { content_index: 0, partial: partial.clone() },
+        fw::AssistantMessageEvent::Start {
+            partial: partial.clone(),
+        },
+        fw::AssistantMessageEvent::TextStart {
+            content_index: 0,
+            partial: partial.clone(),
+        },
         fw::AssistantMessageEvent::TextDelta {
             content_index: 0,
             delta: "chunk".into(),
@@ -167,7 +179,10 @@ fn every_streaming_event_variant_is_wire_identical() {
             content: "whole".into(),
             partial: partial.clone(),
         },
-        fw::AssistantMessageEvent::ThinkingStart { content_index: 1, partial: partial.clone() },
+        fw::AssistantMessageEvent::ThinkingStart {
+            content_index: 1,
+            partial: partial.clone(),
+        },
         fw::AssistantMessageEvent::ThinkingDelta {
             content_index: 1,
             delta: "hmm".into(),
@@ -178,7 +193,10 @@ fn every_streaming_event_variant_is_wire_identical() {
             content: "hmm".into(),
             partial: partial.clone(),
         },
-        fw::AssistantMessageEvent::ToolCallStart { content_index: 2, partial: partial.clone() },
+        fw::AssistantMessageEvent::ToolCallStart {
+            content_index: 2,
+            partial: partial.clone(),
+        },
         fw::AssistantMessageEvent::ToolCallDelta {
             content_index: 2,
             delta: "{\"path\":".into(),
@@ -211,13 +229,31 @@ fn every_streaming_event_variant_is_wire_identical() {
     // than silently at the provider boundary.
     let tags: Vec<String> = events
         .iter()
-        .map(|e| serde_json::to_value(e).unwrap()["type"].as_str().unwrap().to_string())
+        .map(|e| {
+            serde_json::to_value(e).unwrap()["type"]
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     for expected in [
-        "start", "text_start", "text_delta", "text_end", "thinking_start", "thinking_delta",
-        "thinking_end", "toolcall_start", "toolcall_delta", "toolcall_end", "done", "error",
+        "start",
+        "text_start",
+        "text_delta",
+        "text_end",
+        "thinking_start",
+        "thinking_delta",
+        "thinking_end",
+        "toolcall_start",
+        "toolcall_delta",
+        "toolcall_end",
+        "done",
+        "error",
     ] {
-        assert!(tags.contains(&expected.to_string()), "missing event tag `{expected}`");
+        assert!(
+            tags.contains(&expected.to_string()),
+            "missing event tag `{expected}`"
+        );
     }
 }
 
@@ -244,11 +280,8 @@ fn stop_reasons_agree() {
 /// existing session becomes unreadable the day the swap lands.
 #[test]
 fn pi_payloads_are_readable_by_form() {
-    let pi_message = pi_core::AssistantMessage::pending(
-        "anthropic-messages",
-        "anthropic",
-        "claude-opus-5",
-    );
+    let pi_message =
+        pi_core::AssistantMessage::pending("anthropic-messages", "anthropic", "claude-opus-5");
     let json = serde_json::to_string(&pi_message).expect("pi message serializes");
 
     let ours: fw::AssistantMessage =

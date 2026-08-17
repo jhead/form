@@ -88,3 +88,15 @@ struct ActivityTab: View {
     private var hasTurns: Bool { stats.daily.contains { $0.turns > 0 } }
     private var hasMatrix: Bool { stats.weekdayHour.contains { $0.contains { $0 > 0 } } }
 }
+
+#Preview("Activity") {
+    HomePreviewStage(width: 1_080) {
+        ActivityTab(stats: HomePreviewData.populated, onOpenSession: { _ in })
+    }
+}
+
+#Preview("Activity — empty") {
+    HomePreviewStage(theme: .dark, width: 1_080) {
+        ActivityTab(stats: HomePreviewData.empty, onOpenSession: { _ in })
+    }
+}

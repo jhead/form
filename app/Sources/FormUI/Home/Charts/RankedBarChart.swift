@@ -59,3 +59,16 @@ struct RankedBarChart: View {
         return maximum > 0 ? maximum * 1.28 : 1
     }
 }
+
+#Preview("Ranked bars") {
+    HomePreviewStage {
+        ChartCard(title: "By tokens") {
+            RankedBarChart(
+                rows: HomePreviewData.populated.models.enumerated().map { index, stat in
+                    RankedBarRow(
+                        id: stat.id, label: stat.displayName, value: Double(stat.totalTokens),
+                        colorIndex: index)
+                })
+        }
+    }
+}

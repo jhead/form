@@ -111,3 +111,43 @@ struct LatencyDistribution: View {
         names[stat.model.slug] ?? stat.model.modelId.titleCasedIdentifier
     }
 }
+
+#Preview("Latency percentiles") {
+    HomePreviewStage {
+        ChartCard(
+            title: "Time to first token",
+            legend: Percentile.allCases.map { ChartLegendItem($0.label, colorIndex: $0.rawValue) },
+            height: HomeMetrics.standard.chart
+        ) {
+            PercentileBars(entries: previewEntries, format: .durationMs)
+        }
+    }
+}
+
+#Preview("TTFT distribution") {
+    HomePreviewStage(theme: .dark) {
+        ChartCard(title: "TTFT distribution", height: HomeMetrics.standard.chart) {
+            LatencyDistribution(
+                latency: HomePreviewData.populated.latency,
+                names: Dictionary(
+                    HomePreviewData.populated.models.map { ($0.model.slug, $0.displayName) },
+                    uniquingKeysWith: { first, _ in first }))
+        }
+    }
+}
+
+private var previewEntries: [PercentileBars.Entry] {
+    HomePreviewData.populated.latency.flatMap { stat in
+        [
+            PercentileBars.Entry(
+                model: stat.model.modelId.titleCasedIdentifier, percentile: .p50,
+                value: Double(stat.ttftP50)),
+            PercentileBars.Entry(
+                model: stat.model.modelId.titleCasedIdentifier, percentile: .p90,
+                value: Double(stat.ttftP90)),
+            PercentileBars.Entry(
+                model: stat.model.modelId.titleCasedIdentifier, percentile: .p99,
+                value: Double(stat.ttftP99)),
+        ]
+    }
+}

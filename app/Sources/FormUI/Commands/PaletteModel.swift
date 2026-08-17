@@ -168,10 +168,10 @@ public final class PaletteModel {
         case let .session(item):
             center.dismiss(.palette)
             let groupId = center.stores.sessions.session(id: item.sessionId)?.groupId
-            try? await center.stores.newSession(groupId: groupId)
+            _ = try? await center.stores.newSession(groupId: groupId)
         case let .group(item):
             center.dismiss(.palette)
-            try? await center.stores.newSession(groupId: item.group.id)
+            _ = try? await center.stores.newSession(groupId: item.group.id)
         case .command:
             await activate(row)
         }

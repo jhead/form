@@ -87,3 +87,25 @@ struct SessionLeaderboard: View {
         }
     }
 }
+
+#Preview("Leaderboard") {
+    HomePreviewStage(width: 520) {
+        ChartCard(title: "Most tokens", subtitle: "Sessions by total tokens") {
+            SessionLeaderboard(
+                metric: .tokens, ranks: HomePreviewData.populated.sessionsTop.byTokens,
+                onOpen: { _ in })
+        }
+    }
+}
+
+#Preview("Leaderboard — empty") {
+    HomePreviewStage(theme: .dark, width: 520) {
+        ChartCard(
+            title: "Most tokens", isEmpty: true, emptyIcon: "number",
+            emptyTitle: "No sessions yet",
+            emptyMessage: "Your busiest sessions will be listed here."
+        ) {
+            EmptyView()
+        }
+    }
+}

@@ -56,3 +56,19 @@ struct ToolUsageCard: View {
         }
     }
 }
+
+#Preview("Tool usage") {
+    HomePreviewStage {
+        ChartCard(title: "Tool usage") {
+            ToolUsageCard(tools: HomePreviewData.populated.tools)
+        }
+    }
+}
+
+#Preview("Tool usage — dark") {
+    HomePreviewStage(theme: .dark) {
+        ChartCard(title: "Tool usage") {
+            ToolUsageCard(tools: HomePreviewData.populated.tools)
+        }
+    }
+}

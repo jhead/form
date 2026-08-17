@@ -71,3 +71,13 @@ struct TurnDurationChart: View {
             ])
     }
 }
+
+#Preview("Turn duration") {
+    HomePreviewStage {
+        ChartCard(title: "Turn duration", subtitle: "Mean per day", height: HomeMetrics.standard.chartCompact) {
+            TurnDurationChart(
+                daily: HomePreviewData.populated.daily,
+                averageMs: HomePreviewData.populated.headline.avgTurnDurationMs)
+        }
+    }
+}

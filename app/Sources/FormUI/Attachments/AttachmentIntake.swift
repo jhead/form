@@ -109,11 +109,16 @@ public final class AttachmentIntake {
         return false
     }
 
-    private static let pasteboardImageTypes: [(NSPasteboard.PasteboardType, String)] = [
-        (.png, "image/png"),
-        (.tiff, "image/tiff"),
-        (NSPasteboard.PasteboardType("public.jpeg"), "image/jpeg"),
-    ]
+    /// Computed rather than stored: `NSPasteboard.PasteboardType` is not `Sendable`, and a
+    /// static `let` of a non-Sendable type is shared mutable state as far as Swift 6 is
+    /// concerned.
+    private static var pasteboardImageTypes: [(NSPasteboard.PasteboardType, String)] {
+        [
+            (.png, "image/png"),
+            (.tiff, "image/tiff"),
+            (NSPasteboard.PasteboardType("public.jpeg"), "image/jpeg"),
+        ]
+    }
 
     private static func pastedName(for mime: String) -> String {
         let ext = UTType(mimeType: mime)?.preferredFilenameExtension ?? "png"

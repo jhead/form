@@ -92,3 +92,29 @@ struct SparseValue: View {
             .formTooltip("Not enough data yet", detail: reason)
     }
 }
+
+#Preview("ChartCard states") {
+    HomePreviewStage {
+        VStack(spacing: 16) {
+            ChartCard(
+                title: "Tokens over time", subtitle: "Last 30 days",
+                legend: ChartSeries.tokenSeries.map { ChartLegendItem($0) },
+                height: HomeMetrics.standard.chart
+            ) {
+                TokensOverTimeChart(daily: HomePreviewData.populated.daily)
+            }
+
+            ChartCard(
+                title: "Cost", isEmpty: true, emptyIcon: "dollarsign.circle",
+                emptyTitle: "No spend in this range",
+                emptyMessage: "Cost appears once a run reports usage."
+            ) {
+                EmptyView()
+            }
+
+            FormCard(title: "Projected monthly") {
+                SparseValue()
+            }
+        }
+    }
+}

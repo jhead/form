@@ -427,3 +427,13 @@ struct MarkdownRenderingTests {
         #expect(short.first?.contentKey != grown.first?.contentKey)
     }
 }
+
+@MainActor
+struct DebugFingerprint {
+    @Test("fingerprint determinism")
+    func deterministic() {
+        let a = MarkdownFixture.block(1, .paragraph(spans: [.text(text: "one two")]))
+        let b = MarkdownFixture.block(1, .paragraph(spans: [.text(text: "one two")]))
+        #expect(a.id == b.id, "\(a.id) vs \(b.id)")
+    }
+}

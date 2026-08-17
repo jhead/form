@@ -100,3 +100,13 @@ struct RankedModel {
         stat.displayName.isEmpty ? stat.model.modelId.titleCasedIdentifier : stat.displayName
     }
 }
+
+#Preview("Model share") {
+    HomePreviewStage {
+        ChartCard(title: "Token share", subtitle: "Share of tokens by model") {
+            ModelShareDonut(
+                models: HomePreviewData.populated.models,
+                totalTokens: HomePreviewData.populated.headline.totalTokens)
+        }
+    }
+}

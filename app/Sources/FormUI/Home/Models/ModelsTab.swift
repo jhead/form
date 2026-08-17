@@ -174,3 +174,21 @@ struct ModelsTab: View {
         }
     }
 }
+
+#Preview("Models") {
+    HomePreviewStage(width: 1_080) {
+        ModelsTab(stats: HomePreviewData.allTime)
+    }
+}
+
+#Preview("Models — empty") {
+    HomePreviewStage(theme: .dark, width: 1_080) {
+        ModelsTab(stats: HomePreviewData.empty)
+    }
+}
+
+#Preview("Models — sparse") {
+    HomePreviewStage(width: 1_080) {
+        ModelsTab(stats: HomePreviewData.sparse)
+    }
+}

@@ -34,7 +34,7 @@ public enum AppCommands {
             systemImage: "square.and.pencil",
             keywords: ["create", "start", "conversation"]
         ) { context in
-            try? await context.stores.newSession()
+            _ = try? await context.stores.newSession()
         },
 
         AppCommand(
@@ -46,7 +46,7 @@ public enum AppCommands {
             keywords: ["create", "group"],
             isEnabled: { $0.activeSession?.groupId != nil }
         ) { context in
-            try? await context.stores.newSession(groupId: context.activeSession?.groupId)
+            _ = try? await context.stores.newSession(groupId: context.activeSession?.groupId)
         },
 
         AppCommand(
@@ -61,7 +61,7 @@ public enum AppCommands {
             guard let session = context.activeSession else { return }
             // "Clear" means a fresh transcript that keeps the working context — same group,
             // same workspace, same model — not a wiped session.
-            try? await context.stores.sessions.createSession(
+            _ = try? await context.stores.sessions.createSession(
                 groupId: session.groupId,
                 workspaceRoot: session.workspaceRoot,
                 modelRef: session.modelRef)
