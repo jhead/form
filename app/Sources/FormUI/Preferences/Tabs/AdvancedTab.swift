@@ -10,17 +10,6 @@ struct AdvancedTab: View {
 
     private var settings: FormCore.Settings { controller.settings }
 
-    /// What the picker offers. UI copy, not a constraint — the core's bound is
-    /// `AdvancedSettings.harnessSpeedRange`, and a hand-edited value outside this list is
-    /// prepended below so it stays visible rather than being silently snapped.
-    private static let harnessSpeedPresets: [Double] = [0.25, 0.5, 1, 2, 4, 10]
-
-    private var speedOptions: [PreferenceOption<Double>] {
-        var values = Self.harnessSpeedPresets
-        if !values.contains(settings.advanced.harnessSpeed) { values.insert(settings.advanced.harnessSpeed, at: 0) }
-        return values.map { PreferenceOption($0, "\(Self.speedLabel($0))×") }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: theme.metrics.spacing.xxl) {
             PreferenceSection(
@@ -51,16 +40,9 @@ struct AdvancedTab: View {
                         options: LogLevel.all.map { PreferenceOption($0, $0.displayName) }
                     )
                 }
-                FormDivider()
-                PreferenceRow(
-                    title: "Harness speed",
-                    help: "Multiplier on the stub harness's timings."
-                ) {
-                    PreferenceMenu(
-                        selection: controller.binding(\.advanced.harnessSpeed),
-                        options: speedOptions
-                    )
-                }
+                // No "Harness speed" row. It only scales the stub harness's timings, and the
+                // app always runs the real agent — a control that cannot affect anything is
+                // worse than a missing one. The setting stays in the document for tests.
                 FormDivider()
                 PreferenceRow(title: "Event stream", controlAlignment: .center) {
                     HStack(spacing: theme.metrics.spacing.sm) {
@@ -132,9 +114,6 @@ struct AdvancedTab: View {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
 
-    private static func speedLabel(_ value: Double) -> String {
-        value == value.rounded() ? String(Int(value)) : String(format: "%g", value)
-    }
 }
 
 #Preview("Advanced") {
