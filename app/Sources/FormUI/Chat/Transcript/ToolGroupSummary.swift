@@ -45,20 +45,26 @@ public struct ToolGroupSummary: Equatable, Sendable {
         /// Present participle while the group is live, past tense once it is done.
         func clause(_ count: Int, running: Bool) -> String {
             switch self {
-            case .ran: running ? "running \(count) \(plural(count, "command"))"
-                : "ran \(count) \(plural(count, "command"))"
-            case .read: running ? "reading \(count) \(plural(count, "file"))"
-                : "read \(count) \(plural(count, "file"))"
-            case .created: running ? "creating \(count) \(plural(count, "file"))"
-                : "created \(count) \(plural(count, "file"))"
-            case .edited: running ? "editing \(count) \(plural(count, "file"))"
-                : "edited \(count) \(plural(count, "file"))"
-            // "Searching" with no count is the reference's wording; a finished search says
-            // how many it ran.
-            case .searched: running ? "searching"
-                : "searched \(count) \(plural(count, "pattern"))"
-            case .fetched: running ? "fetching \(count) \(plural(count, "page"))"
-                : "fetched \(count) \(plural(count, "page"))"
+            case .ran:
+                let noun = plural(count, "command")
+                return running ? "running \(count) \(noun)" : "ran \(count) \(noun)"
+            case .read:
+                let noun = plural(count, "file")
+                return running ? "reading \(count) \(noun)" : "read \(count) \(noun)"
+            case .created:
+                let noun = plural(count, "file")
+                return running ? "creating \(count) \(noun)" : "created \(count) \(noun)"
+            case .edited:
+                let noun = plural(count, "file")
+                return running ? "editing \(count) \(noun)" : "edited \(count) \(noun)"
+            case .searched:
+                // "Searching" with no count is the reference's wording; a finished search
+                // says how many it ran.
+                let noun = plural(count, "pattern")
+                return running ? "searching" : "searched \(count) \(noun)"
+            case .fetched:
+                let noun = plural(count, "page")
+                return running ? "fetching \(count) \(noun)" : "fetched \(count) \(noun)"
             case .other:
                 if count == 1 { return running ? "using a tool" : "used a tool" }
                 return running ? "using \(count) tools" : "used \(count) tools"

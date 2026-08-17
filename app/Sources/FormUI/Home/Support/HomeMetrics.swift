@@ -31,9 +31,14 @@ struct HomeMetrics: Sendable {
     var readoutWidth: CGFloat = 200
     var legendSwatch: CGFloat = 9
 
-    /// A ranked bar row: the label gutter, and the bar itself.
+    /// A ranked bar row: the label gutter, and the height one row occupies.
     var rankLabelWidth: CGFloat = 116
-    var rankBarHeight: CGFloat = 8
+    var rankRowHeight: CGFloat = 26
+    /// Angular gap between donut sectors.
+    var donutInset: CGFloat = 1.5
+    /// One row of the per-model table and of a leaderboard.
+    var tableRowHeight: CGFloat = 30
+    var leaderboardRowHeight: CGFloat = 34
 
     static let standard = HomeMetrics()
 }

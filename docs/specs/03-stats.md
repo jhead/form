@@ -87,8 +87,12 @@ pub struct SessionLeaderboards { pub by_tokens: Vec<SessionRank>,
 - **Throughput** is `output / (duration_ms - ttft_ms)` in tokens/sec, skipping turns where
   that denominator is < 50 ms.
 - **`share`** values in `models` sum to 1.0 ± 1e-9; the largest bucket absorbs the rounding.
-- **Heatmap levels** are quintiles of the non-zero token distribution, so a light week still
-  shows contrast. Level 0 is reserved for exactly zero.
+- **Heatmap levels** are quartiles of the non-zero token distribution, with level 0
+  reserved for exactly zero — five stops in total, matching the five `heatmapScale`
+  tokens. (An earlier draft said *quintiles* of the non-zero distribution, which with a
+  reserved zero level would need six stops. Quartiles is the reading that holds.) Ranking
+  rather than absolute thresholds means the busiest day in any period always reads as the
+  busiest, and a single active day reads at full intensity.
 - **Projected monthly** = mean daily cost over the trailing 14 days × 30, `0.0` with fewer
   than 3 active days.
 - **Failed and aborted turns** are counted in `turns` and `error_rate` but contribute their
@@ -98,10 +102,21 @@ pub struct SessionLeaderboards { pub by_tokens: Vec<SessionRank>,
 
 ## 4. Performance
 
-`getStats` for `all` over 100k turns must return in < 150 ms. Aggregate in SQL
-(`GROUP BY`), pull raw rows only for percentile work, and cache the result keyed by
+`getStats` for `all` over 100k turns must return in < 150 ms. Cache the result keyed by
 `(range, tz, max(turns.started_at))` — the harness emits `stats_invalidated` and the cache
 key changes naturally.
+
+**On aggregation strategy, corrected by measurement.** This spec originally said to aggregate
+in SQL with `GROUP BY` and pull raw rows only for percentiles. Built that way it missed the
+budget at **225 ms**: five groupings over `turns` mean five scans, and SQLite builds a temp
+b-tree for each because no index covers a local-day expression or a provider/model pair
+(daily 40 ms, weekday_hour 25 ms, models 43 ms, sessions 36 ms, latency 16 ms). Merging them
+into one cube query cost 62 ms on its own; `temp_store=MEMORY` made no difference.
+
+**One raw scan of `turns` with the accumulation done in Rust costs 34 ms and produces all
+five**, which is why the release figure is ~95 ms. SQL still does the aggregation it is good
+at: `tool_invocations`, the index-only day list, the trailing-14-day cost, the message count.
+The reasoning is recorded on `query::scan_turns` so it can be reverted knowingly.
 
 ## 5. Done when
 

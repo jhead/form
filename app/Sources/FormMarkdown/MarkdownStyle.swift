@@ -57,10 +57,21 @@ public struct MarkdownStyle: Sendable, Equatable {
 struct MarkdownMetrics: Equatable {
     let theme: Theme
     let style: MarkdownStyle
+    /// Body text color. A blockquote renders its contents secondary (spec 11 §2), and that
+    /// is the only reason this is not simply `theme.color.textPrimary`.
+    var textColor: ThemeColor
 
     init(theme: Theme, style: MarkdownStyle) {
         self.theme = theme
         self.style = style
+        textColor = theme.color.textPrimary
+    }
+
+    /// The variant a blockquote renders its children with.
+    func quoted() -> MarkdownMetrics {
+        var copy = self
+        copy.textColor = theme.color.textSecondary
+        return copy
     }
 
     // MARK: Identity
@@ -69,6 +80,7 @@ struct MarkdownMetrics: Equatable {
     /// string, and any token change must produce a different one.
     var cacheKey: String {
         "\(theme.id)/\(theme.typography.scale)/\(style.codeFontSize.map { "\($0)" } ?? "-")"
+            + "/\(textColor.hexString)"
     }
 
     // MARK: Type
