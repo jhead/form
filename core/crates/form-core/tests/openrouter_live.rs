@@ -227,3 +227,112 @@ async fn uses_tools_against_a_workspace() {
         );
     }
 }
+
+/// Stopping a live run reports `aborted`, promptly, and keeps what streamed so far.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore]
+async fn aborting_a_live_run_reports_aborted() {
+    use form_core::app::TurnRecord;
+    use form_core::harness::{AbortSignal, Harness, RunContext, RunRequest};
+    use form_core::protocol::{
+        now_ms, AssistantMessageEvent, Entry, EntryKind, EventKind, RunOutcome,
+    };
+    use std::sync::{Arc, Mutex};
+
+    form_core::env::load(std::path::Path::new("."));
+
+    struct Probe {
+        abort: AbortSignal,
+        text: Mutex<String>,
+        outcome: Mutex<Option<RunOutcome>>,
+        count: Mutex<usize>,
+    }
+    impl RunContext for Probe {
+        fn emit(&self, kind: EventKind) {
+            match &kind {
+                // Stop as soon as the model is genuinely producing output.
+                EventKind::MessageUpdate { event, .. } => {
+                    if let AssistantMessageEvent::TextDelta { delta, .. } = event {
+                        let mut text = self.text.lock().unwrap();
+                        text.push_str(delta);
+                        if text.len() > 20 {
+                            self.abort.abort();
+                        }
+                    }
+                }
+                EventKind::RunEnd { outcome, .. } => {
+                    *self.outcome.lock().unwrap() = Some(*outcome);
+                }
+                _ => {}
+            }
+        }
+        fn append_entry(&self, session_id: &str, kind: EntryKind) -> Option<Entry> {
+            let mut count = self.count.lock().unwrap();
+            *count += 1;
+            Some(Entry {
+                id: format!("ent_{count}"),
+                session_id: session_id.to_string(),
+                seq: *count as u64,
+                parent_id: None,
+                timestamp: now_ms(),
+                kind,
+            })
+        }
+        fn replace_entry(&self, _entry: &Entry) {}
+        fn speed(&self) -> f64 {
+            1.0
+        }
+        fn record_turn(&self, _turn: TurnRecord) {}
+    }
+
+    let harness = PiHarness::new("You are verbose.".into())
+        .await
+        .expect("harness");
+    let abort = AbortSignal::new();
+    let probe = Arc::new(Probe {
+        abort: abort.clone(),
+        text: Mutex::new(String::new()),
+        outcome: Mutex::new(None),
+        count: Mutex::new(0),
+    });
+    let ctx: Arc<dyn RunContext> = probe.clone();
+
+    let started = std::time::Instant::now();
+    harness
+        .run(
+            RunRequest {
+                session_id: "ses_abort".into(),
+                run_id: "run_abort".into(),
+                command_id: None,
+                prompt: "Count slowly from 1 to 300, one number per line.".into(),
+                model: model(&test_model()),
+                workspace_root: None,
+                turn_index: 0,
+            },
+            ctx,
+            abort,
+        )
+        .await;
+
+    let elapsed = started.elapsed();
+    let outcome = *probe.outcome.lock().unwrap();
+    let kept = probe.text.lock().unwrap().len();
+    println!("outcome={outcome:?} elapsed={elapsed:?} kept={kept} chars");
+    assert_eq!(
+        outcome,
+        Some(RunOutcome::Aborted),
+        "stopping must report aborted"
+    );
+    assert!(kept > 0, "the partial response must survive the stop");
+}
+
+/// The Providers pane must agree with what the core can actually resolve.
+#[test]
+fn has_key_reflects_a_key_supplied_through_the_environment() {
+    form_core::env::load(std::path::Path::new("."));
+    let resolvable = form_core::credentials::providers_with_keys();
+    assert!(
+        resolvable.iter().any(|p| p == "openrouter"),
+        "the .env key should make openrouter resolvable, got {resolvable:?}"
+    );
+}

@@ -534,7 +534,10 @@ impl Harness for PiHarness {
         };
 
         let outcome = match agent.prompt_text(req.prompt.clone(), Vec::new()).await {
-            Ok(()) if abort.is_aborted() => RunOutcome::Aborted,
+            // The abort check comes first on both arms. Cancelling mid-request usually makes
+            // the provider call return an error, and reporting that as a failure would tell
+            // the user something went wrong when they are the one who stopped it.
+            _ if abort.is_aborted() => RunOutcome::Aborted,
             Ok(()) => RunOutcome::Completed,
             Err(e) => {
                 tracing::warn!(error = %e, "run failed");

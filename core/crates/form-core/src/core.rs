@@ -168,6 +168,34 @@ impl Core {
         self.settings.lock().unwrap().clone()
     }
 
+    /// Settings as the app should see them, with `hasKey` reflecting what the core can
+    /// actually resolve.
+    ///
+    /// The stored flag only ever recorded what the Preferences pane wrote, so a key supplied
+    /// through the environment or a `.env` showed the provider as unconfigured while requests
+    /// to it succeeded. Deriving the flag at read time means the pane cannot disagree with
+    /// the thing doing the work.
+    fn settings_for_app(&self) -> Settings {
+        let mut settings = self.settings_snapshot();
+        let resolvable = crate::credentials::providers_with_keys();
+        for (provider_id, provider) in settings.providers.iter_mut() {
+            provider.has_key = resolvable.iter().any(|p| p == provider_id);
+        }
+        for provider_id in resolvable {
+            settings
+                .providers
+                .entry(provider_id)
+                .or_insert_with(|| crate::settings::ProviderSettings {
+                    enabled: true,
+                    base_url_override: None,
+                    has_key: true,
+                    ..Default::default()
+                })
+                .has_key = true;
+        }
+        settings
+    }
+
     // ------------------------------------------------------------ queries
 
     pub fn query_json(&self, json: &str) -> String {
@@ -203,7 +231,7 @@ impl Core {
                 200,
             )?),
 
-            Query::GetSettings => Envelope::ok(self.settings_snapshot()),
+            Query::GetSettings => Envelope::ok(self.settings_for_app()),
             Query::GetCatalog => Envelope::ok(self.catalog.clone()),
             Query::GetStats { range, tz } => {
                 Envelope::ok(stats::compute_at(&self.data_dir, range, &tz)?)
