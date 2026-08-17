@@ -176,7 +176,7 @@ public struct RootView<HomeContent: View, SessionContent: View>: View {
                 if stores.sessions.session(id: id) != nil { return stored }
             }
         }
-        guard stores.settings.settings.general.startupView != "home" else { return .home }
+        guard stores.settings.settings.general.startupView != .home else { return .home }
         return SidebarOrder.visibleSessions(in: stores.sessions).first
             .map { AppRoute.session($0.id) } ?? .home
     }

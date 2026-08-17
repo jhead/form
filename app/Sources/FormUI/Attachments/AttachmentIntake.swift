@@ -29,6 +29,9 @@ public final class AttachmentIntake {
     /// Local id → the command that created it, so the `attachment_added` echo can be matched
     /// back to the chip that is waiting for it.
     @ObservationIgnored private var awaiting: [CommandID: UUID] = [:]
+    /// Content hash → the thumbnail written for it. Rasterizing and the core's acknowledgement
+    /// race; whichever finishes second sends `setAttachmentThumbnail`.
+    @ObservationIgnored private var thumbnailPaths: [String: String] = [:]
 
     public init(stores: CoreStores, thumbnails: ThumbnailStore = .shared) {
         self.stores = stores
@@ -36,7 +39,15 @@ public final class AttachmentIntake {
         // The core stamps the real data directory on the settings document; pointing the
         // thumbnail cache at `{dataDir}/thumbnails` here means no other workstream has to
         // remember to (spec 13, Part B).
-        thumbnails.configure(dataDir: stores.settings.settings.dataDir)
+        thumbnails.configure(dataDir: stores.settings.settings.advanced.dataDir)
+
+        // `addAttachment` acks immediately and the record arrives as `attachment_added`, so
+        // the chip cannot learn its id without the event stream. `CoreStores` exposes exactly
+        // one sink and this is its only consumer today, so the intake claims it on
+        // construction rather than making every host remember a wiring line. If a second
+        // consumer ever appears, W7's note says the sink becomes a list — take it there
+        // rather than adding a second mechanism here.
+        stores.onEvent = { [weak self] event in self?.apply(event) }
     }
 
     // MARK: - Derived
@@ -167,7 +178,7 @@ public final class AttachmentIntake {
         append(item)
 
         // Rasterize and dispatch concurrently — neither needs the other's answer.
-        Task { _ = await thumbnails.thumbnail(sha256: probe.sha256, source: source) }
+        Task { await rasterize(item.id, sha256: probe.sha256, source: source) }
 
         do {
             let commandId = try await stores.client.dispatch(command(for: source, probe: probe))
@@ -178,6 +189,28 @@ public final class AttachmentIntake {
         } catch {
             update(item.id) { $0.state = .rejected(reason: "\(error)") }
         }
+    }
+
+    /// Renders the thumbnail, then records its path on the record through
+    /// `setAttachmentThumbnail`.
+    ///
+    /// The path is derivable from the content hash, so a Mac never strictly needs the round
+    /// trip — but a Windows or Linux client reading the same store would have no way to know
+    /// a thumbnail already exists. Recording it is what makes the cache portable.
+    private func rasterize(_ local: UUID, sha256: String, source: AttachmentSource) async {
+        guard await thumbnails.thumbnail(sha256: sha256, source: source) != nil else { return }
+        thumbnailPaths[sha256] = thumbnails.path(forSHA: sha256)
+        guard let attachmentId = items.first(where: { $0.id == local })?.attachmentId else {
+            // The record has not come back yet; `apply` records it when it does.
+            return
+        }
+        await recordThumbnail(attachmentId: attachmentId, sha256: sha256)
+    }
+
+    private func recordThumbnail(attachmentId: String, sha256: String) async {
+        guard let path = thumbnailPaths[sha256] else { return }
+        _ = try? await stores.client.dispatch(
+            .setAttachmentThumbnail(attachmentId: attachmentId, path: path))
     }
 
     private func command(for source: AttachmentSource, probe: AttachmentReader.Probe)
@@ -217,6 +250,12 @@ public final class AttachmentIntake {
                 // No command id to match on — a record added by another surface for content we
                 // are already holding is still the same blob.
                 items[index].state = .ready(attachmentId: attachment.id)
+            }
+            // If the raster finished first it has been waiting for exactly this id.
+            if attachment.thumbPath == nil, thumbnailPaths[attachment.sha256] != nil {
+                let sha = attachment.sha256
+                let id = attachment.id
+                Task { await recordThumbnail(attachmentId: id, sha256: sha) }
             }
         case let .attachmentRemoved(attachmentId):
             items.removeAll { $0.attachmentId == attachmentId }

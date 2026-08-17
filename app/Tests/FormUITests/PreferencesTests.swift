@@ -50,7 +50,15 @@ struct PreferencesTests {
     func debounceFires() async throws {
         let (controller, transport) = await makeController()
         controller.edit { $0.general.confirmOnDelete = false }
-        try await Task.sleep(for: .milliseconds(600))
+
+        // Polled rather than slept: the assertion is "it flushes without being told to", not
+        // "it flushes within exactly one window", and a loaded test machine can stretch a
+        // 300 ms timer well past a fixed wait.
+        let deadline = ContinuousClock.now + .seconds(5)
+        while controller.hasPendingEdit, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
         #expect(!transport.commands.isEmpty)
         #expect(!controller.hasPendingEdit)
     }
@@ -85,14 +93,14 @@ struct PreferencesTests {
 
     // MARK: - Fields the Swift mirror does not name
 
-    @Test("unknown-bag settings round-trip through JSON")
-    func unknownBagFieldsRoundTrip() throws {
+    @Test("every control's field round-trips through JSON")
+    func documentFieldsRoundTrip() throws {
         var settings = FormCore.Settings()
-        settings.queueMode = .interrupt
-        settings.toolExecution = .sequential
-        settings.telemetry = true
-        settings.startupView = .lastSession
-        settings.density = .compact
+        settings.defaults.queueMode = .interrupt
+        settings.defaults.toolExecution = .sequential
+        settings.general.telemetry = true
+        settings.general.startupView = .lastSession
+        settings.appearance.density = .compact
 
         let data = try JSONEncoder().encode(settings)
         let text = String(decoding: data, as: UTF8.self)
@@ -100,33 +108,35 @@ struct PreferencesTests {
         #expect(text.contains("\"toolExecution\""))
 
         let decoded = try JSONDecoder().decode(FormCore.Settings.self, from: data)
-        #expect(decoded.queueMode == .interrupt)
-        #expect(decoded.toolExecution == .sequential)
-        #expect(decoded.telemetry == true)
-        #expect(decoded.startupView == .lastSession)
-        #expect(decoded.density == .compact)
+        #expect(decoded.defaults.queueMode == .interrupt)
+        #expect(decoded.defaults.toolExecution == .sequential)
+        #expect(decoded.general.telemetry == true)
+        #expect(decoded.general.startupView == .lastSession)
+        #expect(decoded.appearance.density == .compact)
     }
 
-    @Test("absent sections read as the core's defaults, not as zero")
+    @Test("a fresh document carries the core's defaults, not zeroes")
     func defaultsMatchTheCore() {
         let settings = FormCore.Settings()
-        #expect(settings.codeFontSize == 12)
-        #expect(settings.tabWidth == 4)
-        #expect(settings.showLineNumbers == true)
-        #expect(settings.wrapCode == false)
-        #expect(settings.logLevel == .info)
-        #expect(settings.harnessSpeed == 1)
-        #expect(settings.queueMode == .queue)
-        #expect(settings.toolExecution == .parallel)
+        #expect(settings.editor.fontSize == 12)
+        #expect(settings.editor.tabWidth == 4)
+        #expect(settings.editor.showLineNumbers == true)
+        #expect(settings.editor.wrapCode == false)
+        #expect(settings.advanced.logLevel == .info)
+        #expect(settings.advanced.harnessSpeed == 1)
+        #expect(settings.defaults.queueMode == .queue)
+        #expect(settings.defaults.toolExecution == .parallel)
+        // The core turns a provider on by default; the tab renders that, not `false`.
+        #expect(ProviderSettings().enabled == true)
     }
 
-    @Test("editing an absent section materializes only what was set")
-    func editorSectionIsSparse() throws {
-        var settings = FormCore.Settings()
-        #expect(settings.editor == nil)
-        settings.tabWidth = 2
-        #expect(settings.editor?.tabWidth == 2)
-        #expect(settings.editor?.font == nil, "an untouched field stays absent for the core to fill")
+    @Test("the tab's slider bounds are the core's clamp ranges, not a second copy")
+    func rangesComeFromTheCore() {
+        #expect(AppearanceSettings.textSizeRange == 0.85 ... 1.4)
+        #expect(AppearanceSettings.sidebarWidthRange == 220 ... 420)
+        #expect(EditorSettings.fontSizeRange == 9 ... 24)
+        #expect(EditorSettings.tabWidthRange == 1 ... 8)
+        #expect(AdvancedSettings.harnessSpeedRange == 0.05 ... 200)
     }
 
     // MARK: - API keys (F8.5)
@@ -209,8 +219,8 @@ struct PreferencesTests {
         }
         #expect(settings.appearance.textSizeMultiplier == 1.4)
         #expect(settings.appearance.sidebarWidth == 220)
-        #expect(settings.editor?.fontSize == 24)
-        #expect(settings.editor?.tabWidth == 8)
+        #expect(settings.editor.fontSize == 24)
+        #expect(settings.editor.tabWidth == 8)
         #expect(notes.count == 4)
     }
 

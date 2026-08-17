@@ -11,10 +11,8 @@ struct GeneralTab: View {
             PreferenceSection(title: "Startup") {
                 PreferenceRow(title: "Open on launch") {
                     SegmentedToggle(
-                        selection: controller.binding(\.startupView),
-                        segments: StartupView.allCases.map {
-                            .init(value: $0, title: $0.label)
-                        },
+                        selection: controller.binding(\.general.startupView),
+                        segments: StartupView.all.map { .init(value: $0, title: $0.displayName) },
                         height: theme.metrics.controlHeightMedium
                     )
                 }
@@ -42,11 +40,11 @@ struct GeneralTab: View {
             ) {
                 PreferenceRow(
                     title: "Sending during a run",
-                    help: "Queue the message for the next turn, or interrupt the current one."
+                    help: "Queue it for the next turn, or stop the current run and send it."
                 ) {
                     SegmentedToggle(
-                        selection: controller.binding(\.queueMode),
-                        segments: QueueMode.allCases.map { .init(value: $0, title: $0.label) },
+                        selection: controller.binding(\.defaults.queueMode),
+                        segments: QueueMode.all.map { .init(value: $0, title: $0.displayName) },
                         height: theme.metrics.controlHeightMedium
                     )
                 }
@@ -56,10 +54,8 @@ struct GeneralTab: View {
                     help: "Run a turn's tool calls one after another, or together."
                 ) {
                     SegmentedToggle(
-                        selection: controller.binding(\.toolExecution),
-                        segments: ToolExecutionMode.allCases.map {
-                            .init(value: $0, title: $0.label)
-                        },
+                        selection: controller.binding(\.defaults.toolExecution),
+                        segments: ToolExecution.all.map { .init(value: $0, title: $0.displayName) },
                         height: theme.metrics.controlHeightMedium
                     )
                 }
@@ -70,7 +66,7 @@ struct GeneralTab: View {
                     title: "Share anonymous usage data",
                     help: "Off by default. Nothing reads this yet."
                 ) {
-                    PreferenceToggle(isOn: controller.binding(\.telemetry))
+                    PreferenceToggle(isOn: controller.binding(\.general.telemetry))
                 }
             }
         }

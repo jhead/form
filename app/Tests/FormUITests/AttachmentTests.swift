@@ -40,12 +40,12 @@ struct AttachmentTests {
         return url
     }
 
-    private func makeIntake() -> (AttachmentIntake, MockTransport) {
+    private func makeIntake() -> (AttachmentIntake, MockTransport, CoreStores) {
         let transport = MockTransport()
         let stores = CoreStores(client: CoreClient(mock: transport))
         let intake = AttachmentIntake(stores: stores, thumbnails: ThumbnailStore())
         intake.sessionId = "ses_test"
-        return (intake, transport)
+        return (intake, transport, stores)
     }
 
     // MARK: - Hashing
@@ -74,7 +74,7 @@ struct AttachmentTests {
     func intakeDispatches() async throws {
         let directory = try scratch()
         let file = try writePNG(directory.appending(path: "shot.png"), side: 64)
-        let (intake, transport) = makeIntake()
+        let (intake, transport, _) = makeIntake()
 
         await intake.ingest(.file(file))
 
@@ -98,7 +98,7 @@ struct AttachmentTests {
         let second = directory.appending(path: "b.png")
         try FileManager.default.copyItem(at: first, to: second)
 
-        let (intake, transport) = makeIntake()
+        let (intake, transport, _) = makeIntake()
         await intake.ingest(.file(first))
         await intake.ingest(.file(second))
 
@@ -110,15 +110,18 @@ struct AttachmentTests {
         #expect(addCount == 1)
     }
 
-    @Test("attachment_added promotes the chip to ready")
+    @Test("attachment_added arrives through the CoreStores sink and promotes the chip")
     func eventPromotesToReady() async throws {
         let directory = try scratch()
         let file = try writePNG(directory.appending(path: "c.png"), side: 64)
-        let (intake, _) = makeIntake()
+        let (intake, _, stores) = makeIntake()
         await intake.ingest(.file(file))
 
         let sha = intake.items[0].sha256
-        intake.apply(
+        // Not `intake.apply` directly: the point is that the intake claimed `onEvent`, which
+        // is the only route an `attachment_added` has into the tray.
+        let sink = try #require(stores.onEvent)
+        sink(
             CoreEvent(
                 kind: .attachmentAdded(
                     attachment: Attachment(
@@ -129,9 +132,36 @@ struct AttachmentTests {
         #expect(intake.readyAttachmentIds == ["att_new"])
     }
 
+    @Test("a rendered thumbnail is recorded on the record through the core")
+    func thumbnailPathIsRecorded() async throws {
+        let directory = try scratch()
+        let file = try writePNG(directory.appending(path: "d.png"), side: 300)
+        let (intake, transport, stores) = makeIntake()
+        await intake.ingest(.file(file))
+
+        let sha = intake.items[0].sha256
+        let sink = try #require(stores.onEvent)
+        sink(
+            CoreEvent(
+                kind: .attachmentAdded(
+                    attachment: Attachment(
+                        id: "att_thumb", sessionId: "ses_test", sha256: sha, filename: "d.png",
+                        mime: "image/png", bytes: 100, path: file.path))))
+
+        // The raster and the ack race; either order ends with one setAttachmentThumbnail.
+        try await Task.sleep(for: .milliseconds(300))
+        let recorded = transport.commands.compactMap { command -> (String, String)? in
+            if case let .setAttachmentThumbnail(id, path) = command { return (id, path) }
+            return nil
+        }
+        #expect(recorded.count == 1)
+        #expect(recorded.first?.0 == "att_thumb")
+        #expect(recorded.first?.1.hasSuffix("\(sha).png") == true)
+    }
+
     @Test("removing a sent chip dispatches removeAttachment")
     func removeDispatches() async throws {
-        let (intake, transport) = makeIntake()
+        let (intake, transport, _) = makeIntake()
         intake.seed([
             PendingAttachment(
                 id: UUID(), source: .file(URL(fileURLWithPath: "/tmp/x.png")), filename: "x.png",
@@ -152,7 +182,7 @@ struct AttachmentTests {
 
     @Test("a rejection stays in the tray with its reason until dismissed")
     func rejectionIsInlineAndDismissible() {
-        let (intake, _) = makeIntake()
+        let (intake, _, _) = makeIntake()
         intake.seed([
             PendingAttachment(
                 id: UUID(), source: .file(URL(fileURLWithPath: "/tmp/big.mov")),
@@ -170,7 +200,7 @@ struct AttachmentTests {
 
     @Test("an unreadable file is rejected before it reaches the core")
     func unreadableFileIsRejectedLocally() async throws {
-        let (intake, transport) = makeIntake()
+        let (intake, transport, _) = makeIntake()
         await intake.ingest(
             .file(URL(fileURLWithPath: "/tmp/does-not-exist-\(UUID().uuidString).png")))
         #expect(intake.items.count == 1)

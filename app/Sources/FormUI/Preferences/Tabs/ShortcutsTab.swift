@@ -18,7 +18,7 @@ struct ShortcutsTab: View {
     /// instant it is typed, without waiting for the 300 ms flush to come back.
     @State private var resolver = ShortcutResolver()
 
-    private var overrides: [String: String] { controller.settings.shortcutOverrides }
+    private var overrides: [String: String] { controller.settings.shortcuts }
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.metrics.spacing.xxl) {
@@ -78,7 +78,7 @@ struct ShortcutsTab: View {
     }
 
     private func apply(_ patch: [String: String]) {
-        controller.edit { $0.shortcutOverrides = patch }
+        controller.edit { $0.shortcuts = patch }
         resolver.apply(overrides: patch)
     }
 

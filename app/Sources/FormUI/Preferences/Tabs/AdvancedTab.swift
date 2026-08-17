@@ -10,9 +10,14 @@ struct AdvancedTab: View {
 
     private var settings: FormCore.Settings { controller.settings }
 
+    /// What the picker offers. UI copy, not a constraint — the core's bound is
+    /// `AdvancedSettings.harnessSpeedRange`, and a hand-edited value outside this list is
+    /// prepended below so it stays visible rather than being silently snapped.
+    private static let harnessSpeedPresets: [Double] = [0.25, 0.5, 1, 2, 4, 10]
+
     private var speedOptions: [PreferenceOption<Double>] {
-        var values = AdvancedDefaults.harnessSpeedPresets
-        if !values.contains(settings.harnessSpeed) { values.insert(settings.harnessSpeed, at: 0) }
+        var values = Self.harnessSpeedPresets
+        if !values.contains(settings.advanced.harnessSpeed) { values.insert(settings.advanced.harnessSpeed, at: 0) }
         return values.map { PreferenceOption($0, "\(Self.speedLabel($0))×") }
     }
 
@@ -29,11 +34,11 @@ struct AdvancedTab: View {
                             .foregroundStyle(theme.color.textSecondary)
                             .lineLimit(1)
                             .truncationMode(.head)
-                            .formTooltip(settings.dataDir)
+                            .formTooltip(settings.advanced.dataDir)
                         FormButton("Reveal", systemImage: "folder", size: .small) {
                             revealDataDir()
                         }
-                        .disabled(settings.dataDir.isEmpty)
+                        .disabled(settings.advanced.dataDir.isEmpty)
                     }
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 }
@@ -42,8 +47,8 @@ struct AdvancedTab: View {
             PreferenceSection(title: "Diagnostics") {
                 PreferenceRow(title: "Log level") {
                     PreferenceMenu(
-                        selection: controller.binding(\.logLevel),
-                        options: LogLevel.allCases.map { PreferenceOption($0, $0.label) }
+                        selection: controller.binding(\.advanced.logLevel),
+                        options: LogLevel.all.map { PreferenceOption($0, $0.displayName) }
                     )
                 }
                 FormDivider()
@@ -52,7 +57,7 @@ struct AdvancedTab: View {
                     help: "Multiplier on the stub harness's timings."
                 ) {
                     PreferenceMenu(
-                        selection: controller.binding(\.harnessSpeed),
+                        selection: controller.binding(\.advanced.harnessSpeed),
                         options: speedOptions
                     )
                 }
@@ -116,13 +121,13 @@ struct AdvancedTab: View {
     }
 
     private var displayPath: String {
-        let path = settings.dataDir
+        let path = settings.advanced.dataDir
         guard !path.isEmpty else { return "Not reported yet" }
         return (path as NSString).abbreviatingWithTildeInPath
     }
 
     private func revealDataDir() {
-        let path = settings.dataDir
+        let path = settings.advanced.dataDir
         guard !path.isEmpty else { return }
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }

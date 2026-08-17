@@ -7,11 +7,6 @@ import Testing
 
 /// Spec 12 §5: the dashboard is a pure function of one `UsageStats` document, plus the
 /// formatting and bucketing rules the cards depend on.
-///
-/// **This file is not compiled yet.** `Package.swift` has no `FormUITests` target and W12
-/// does not own that file; wiring is one line —
-/// `.testTarget(name: "FormUITests", dependencies: ["FormUI"])` — and is requested in the
-/// W12 report.
 @MainActor
 struct HomeDashboardTests {
     // MARK: Purity
@@ -41,6 +36,9 @@ struct HomeDashboardTests {
         #expect(try snapshot(CostTab(stats: empty)).isEmpty == false)
     }
 
+    /// PNG rather than TIFF: the pixels are deterministic, but `tiffRepresentation` folds in
+    /// a colour profile that differs between the first render of a process and later ones,
+    /// which would make this test flaky for a reason that has nothing to do with the view.
     private func snapshot(_ view: some View, width: CGFloat = 900) throws -> Data {
         let renderer = ImageRenderer(
             content:
@@ -50,7 +48,8 @@ struct HomeDashboardTests {
         )
         renderer.scale = 1
         let image = try #require(renderer.nsImage)
-        return try #require(image.tiffRepresentation)
+        let bitmap = try #require(NSBitmapImageRep(data: try #require(image.tiffRepresentation)))
+        return try #require(bitmap.representation(using: .png, properties: [:]))
     }
 
     // MARK: Formatting

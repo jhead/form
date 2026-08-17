@@ -14,27 +14,27 @@ struct EditorTab: View {
             PreferenceSection(title: "Code") {
                 PreferenceRow(title: "Font") {
                     PreferenceMenu(
-                        selection: controller.binding(\.codeFont),
+                        selection: controller.binding(\.editor.font),
                         options: MonospacedFonts.available.map { PreferenceOption($0, $0) }
                     )
                 }
                 FormDivider()
                 PreferenceRow(title: "Size") {
                     PreferenceSlider(
-                        value: controller.binding(\.codeFontSize),
-                        range: EditorDefaults.fontSizeRange,
+                        value: controller.binding(\.editor.fontSize),
+                        range: EditorSettings.fontSizeRange,
                         ladder: Array(
                             stride(
-                                from: EditorDefaults.fontSizeRange.lowerBound,
-                                through: EditorDefaults.fontSizeRange.upperBound, by: 1)),
+                                from: EditorSettings.fontSizeRange.lowerBound,
+                                through: EditorSettings.fontSizeRange.upperBound, by: 1)),
                         format: { "\(Int($0.rounded())) pt" }
                     )
                 }
                 FormDivider()
                 PreferenceRow(title: "Tab width") {
                     PreferenceMenu(
-                        selection: controller.binding(\.tabWidth),
-                        options: EditorDefaults.tabWidthRange.map {
+                        selection: controller.binding(\.editor.tabWidth),
+                        options: EditorSettings.tabWidthRange.map {
                             PreferenceOption($0, "\($0) spaces")
                         }
                     )
@@ -44,11 +44,11 @@ struct EditorTab: View {
                     title: "Wrap long lines",
                     help: "Off scrolls a wide line horizontally instead of folding it."
                 ) {
-                    PreferenceToggle(isOn: controller.binding(\.wrapCode))
+                    PreferenceToggle(isOn: controller.binding(\.editor.wrapCode))
                 }
                 FormDivider()
                 PreferenceRow(title: "Show line numbers") {
-                    PreferenceToggle(isOn: controller.binding(\.showLineNumbers))
+                    PreferenceToggle(isOn: controller.binding(\.editor.showLineNumbers))
                 }
             }
 
@@ -57,11 +57,11 @@ struct EditorTab: View {
                 footer: "Rendered with the settings above, at the current text size."
             ) {
                 CodeSample(
-                    font: settings.codeFont,
-                    size: settings.codeFontSize,
-                    tabWidth: settings.tabWidth,
-                    wraps: settings.wrapCode,
-                    showsLineNumbers: settings.showLineNumbers
+                    font: settings.editor.font,
+                    size: settings.editor.fontSize,
+                    tabWidth: settings.editor.tabWidth,
+                    wraps: settings.editor.wrapCode,
+                    showsLineNumbers: settings.editor.showLineNumbers
                 )
             }
         }
@@ -162,8 +162,8 @@ enum MonospacedFonts {
             guard let font = NSFont(name: family, size: NSFont.systemFontSize) else { return false }
             return font.isFixedPitch
         }
-        var names = [EditorDefaults.font]
-        names.append(contentsOf: fixed.filter { $0 != EditorDefaults.font })
+        var names = [EditorSettings().font]
+        names.append(contentsOf: fixed.filter { $0 != EditorSettings().font })
         return names
     }()
 }

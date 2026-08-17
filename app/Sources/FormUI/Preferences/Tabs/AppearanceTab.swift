@@ -51,8 +51,8 @@ struct AppearanceTab: View {
                     help: "Compact tightens row heights and padding throughout."
                 ) {
                     SegmentedToggle(
-                        selection: controller.binding(\.density),
-                        segments: Density.allCases.map { .init(value: $0, title: $0.label) },
+                        selection: controller.binding(\.appearance.density),
+                        segments: Density.all.map { .init(value: $0, title: $0.displayName) },
                         height: theme.metrics.controlHeightMedium
                     )
                 }
@@ -62,7 +62,7 @@ struct AppearanceTab: View {
                 PreferenceRow(title: "Sidebar width") {
                     PreferenceSlider(
                         value: controller.binding(\.appearance.sidebarWidth),
-                        range: AppearanceLimits.sidebarWidthRange,
+                        range: AppearanceSettings.sidebarWidthRange,
                         format: { "\(Int($0.rounded())) pt" }
                     )
                 }

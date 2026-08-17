@@ -2,8 +2,8 @@ import SwiftUI
 import FormCore
 import FormDesign
 
-/// Under the field: a left cluster (mode, `+`, mic, chevron) and a right cluster (model,
-/// effort, context ring), all 12 pt secondary — spec 08 §1.
+/// Under the field: a left cluster (mode, `+`, mic) and a right cluster (model, effort,
+/// context ring), all 12 pt secondary — spec 08 §1.
 struct ComposerControlRow: View {
     @Environment(\.theme) private var theme
 
@@ -12,12 +12,12 @@ struct ComposerControlRow: View {
     let canSend: Bool
     let onSend: () -> Void
     let onStop: () -> Void
+    let onAttach: () -> Void
 
+    /// The session's override, falling back to the global default (F8.4).
     private var modelRef: ModelRef {
         stores.sessions.selected?.modelRef ?? stores.settings.settings.defaults.modelRef
     }
-
-    let onAttach: () -> Void
 
     var body: some View {
         HStack(spacing: theme.metrics.spacing.md) {

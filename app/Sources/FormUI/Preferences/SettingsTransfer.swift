@@ -136,26 +136,26 @@ public enum SettingsTransfer {
             value = clamped
         }
 
-        clamp(&settings.appearance.textSizeMultiplier, 0.85 ... 1.4, "appearance.textSizeMultiplier")
+        // The ranges are the core's, read off the section types rather than restated here —
+        // a second copy of a bound is a second thing to get wrong.
         clamp(
-            &settings.appearance.sidebarWidth, AppearanceLimits.sidebarWidthRange,
+            &settings.appearance.textSizeMultiplier, AppearanceSettings.textSizeRange,
+            "appearance.textSizeMultiplier")
+        clamp(
+            &settings.appearance.sidebarWidth, AppearanceSettings.sidebarWidthRange,
             "appearance.sidebarWidth")
+        clamp(&settings.editor.fontSize, EditorSettings.fontSizeRange, "editor.fontSize")
+        clamp(
+            &settings.advanced.harnessSpeed, AdvancedSettings.harnessSpeedRange,
+            "advanced.harnessSpeed")
 
-        if var size = settings.editor?.fontSize {
-            clamp(&size, EditorDefaults.fontSizeRange, "editor.fontSize")
-            settings.editor?.fontSize = size
-        }
-        if let width = settings.editor?.tabWidth,
-            !EditorDefaults.tabWidthRange.contains(width) {
+        let tabWidth = settings.editor.tabWidth
+        if !EditorSettings.tabWidthRange.contains(tabWidth) {
             let clamped = min(
-                EditorDefaults.tabWidthRange.upperBound,
-                max(EditorDefaults.tabWidthRange.lowerBound, width))
-            notes.append("editor.tabWidth \(width) clamped to \(clamped)")
-            settings.editor?.tabWidth = clamped
-        }
-        if var speed = settings.advanced?.harnessSpeed {
-            clamp(&speed, AdvancedDefaults.harnessSpeedRange, "advanced.harnessSpeed")
-            settings.advanced?.harnessSpeed = speed
+                EditorSettings.tabWidthRange.upperBound,
+                max(EditorSettings.tabWidthRange.lowerBound, tabWidth))
+            notes.append("editor.tabWidth \(tabWidth) clamped to \(clamped)")
+            settings.editor.tabWidth = clamped
         }
 
         // An imported document must never carry a key, even if someone hand-added one. The

@@ -50,6 +50,7 @@ final class AppLaunch {
             let center = CommandCenter(
                 stores: stores, theme: themeController, state: appState)
             center.hooks.openPreferences = { _ in appState.preferencesPresented = true }
+            center.hooks.chooseWorkspaceFolder = WorkspaceRootController.folderPickerHook(stores)
             commandCenter = center
 
             phase = .ready(stores, appState)
